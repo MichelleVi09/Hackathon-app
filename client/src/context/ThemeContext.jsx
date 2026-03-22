@@ -1,6 +1,12 @@
-import React from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 
-const themes = {
+export const themes = {
   warm: {
     light: {
       dashBg: "#FAF7F2",
@@ -315,19 +321,19 @@ const themes = {
   }
 };
 
-export const ThemeContext = React.createContext();
+export const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = React.useState(() => localStorage.getItem("wellby-theme") ?? "warm");
-  const [mode, setMode] = React.useState(() => localStorage.getItem("wellby-mode") ?? "light");
+  const [theme, setThemeState] = useState(() => localStorage.getItem("wellby-theme") ?? "warm");
+  const [mode, setMode] = useState(() => localStorage.getItem("wellby-mode") ?? "light");
   const colors = themes[theme][mode];
 
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem("wellby-theme", theme);
     localStorage.setItem("wellby-mode", mode);
   }, [theme, mode]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     Object.entries(colors).forEach(([key, value]) => {
       document.documentElement.style.setProperty(`--wellby-${key}`, value);
     });
@@ -335,18 +341,20 @@ export function ThemeProvider({ children }) {
     document.documentElement.dataset.mode = mode;
   }, [colors, theme, mode]);
 
-  const setTheme = React.useCallback((nextTheme) => {
+  const setTheme = useCallback((nextTheme) => {
     setThemeState(nextTheme);
   }, []);
 
-  const toggleMode = React.useCallback(() => {
+  const toggleMode = useCallback(() => {
     setMode((current) => (current === "light" ? "dark" : "light"));
   }, []);
 
-  const value = React.useMemo(
+  const value = useMemo(
     () => ({ theme, setTheme, mode, toggleMode, colors, themes }),
     [theme, setTheme, mode, toggleMode, colors]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
+
+export default ThemeContext;
