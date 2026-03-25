@@ -45,11 +45,14 @@ export default function SnakeGame({ onExit }) {
       };
       const nextDirection = keyMap[event.key];
       if (nextDirection) {
+        if (event.key.startsWith("Arrow")) {
+          event.preventDefault();
+        }
         directionRef.current = nextDirection;
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
@@ -126,8 +129,8 @@ export default function SnakeGame({ onExit }) {
   }
 
   return (
-    <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-2xl">Snake</h3>
           <p className="text-sm">High score: {readStorage(STORAGE_KEYS.gameScores, { snake: 0 }).snake ?? 0}</p>
@@ -136,11 +139,13 @@ export default function SnakeGame({ onExit }) {
           End Break & Return to Work
         </button>
       </div>
-      <canvas ref={canvasRef} width={320} height={320} className="mx-auto rounded-[24px] shadow-inner" />
-      <div className="mt-4 flex items-center justify-between">
+      <div className="flex justify-center rounded-[28px] px-4 py-6" style={{ background: colors.secondary }}>
+        <canvas ref={canvasRef} width={320} height={320} className="rounded-[24px] shadow-inner" />
+      </div>
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="font-bold">Score: {score}</p>
         {gameOver ? (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-bold">Ready to get back to it?</span>
             <button onClick={restart} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.primary, color: colors.primaryText }}>
               Play again

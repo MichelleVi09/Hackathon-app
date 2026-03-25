@@ -145,8 +145,8 @@ export default function ChessGame({ onExit }) {
   }
 
   return (
-    <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-2xl">Chess</h3>
           <p className="text-sm">Pass-and-play or a simple depth-3 AI opponent.</p>
@@ -155,7 +155,7 @@ export default function ChessGame({ onExit }) {
           End Break & Return to Work
         </button>
       </div>
-      <div className="mb-4 flex gap-3">
+      <div className="mb-6 flex flex-wrap gap-3">
         <button
           onClick={() => {
             setMode("ai");
@@ -177,8 +177,9 @@ export default function ChessGame({ onExit }) {
           Two-player
         </button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[auto_220px]">
-        <div className="grid w-full max-w-[520px] grid-cols-8 overflow-hidden rounded-[24px] shadow-lg">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="flex justify-center rounded-[28px] p-4" style={{ background: colors.secondary }}>
+          <div className="grid w-full max-w-[520px] grid-cols-8 overflow-hidden rounded-[24px] shadow-lg">
           {board.map((piece, index) => {
             const isLight = (Math.floor(index / 8) + index) % 2 === 0;
             const square = algebraic(index);
@@ -201,6 +202,7 @@ export default function ChessGame({ onExit }) {
               </button>
             );
           })}
+          </div>
         </div>
         <aside className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
           <h4 className="font-bold">Move history</h4>
