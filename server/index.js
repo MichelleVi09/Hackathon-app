@@ -54,10 +54,9 @@ async function createApp() {
   return app;
 }
 
-createApp()
-  .then((app) => {
-    const port = Number(process.env.PORT ?? 3000);
-    app.listen(port, () => {
-      console.log(`Wellby listening on http://localhost:${port}`);
-    });
+createApp().then((app) => {
+  const port = Number(process.env.PORT ?? 3000);
+  app.listen(port, () => {
+    console.log(`Wellby listening on http://localhost:${port}`);
   });
+});
