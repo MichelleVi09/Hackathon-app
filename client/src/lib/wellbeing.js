@@ -15,29 +15,6 @@ export function getSetupAvailability(setup) {
   return setup === "wfh" || setup === "hybrid" ? 1 : 0;
 }
 
-export function getFriendlyStatus(burnRate) {
-  if (burnRate < 0.3) {
-    return { label: "You're doing great! 🌱", tone: "green" };
-  }
-  if (burnRate < 0.6) {
-    return { label: "Let's keep an eye on things 👀", tone: "yellow" };
-  }
-  return { label: "Time for a Wellby break! 💛", tone: "red" };
-}
-
-export function getAlertLevel(burnRate) {
-  if (burnRate > 0.7) {
-    return 3;
-  }
-  if (burnRate > 0.5) {
-    return 2;
-  }
-  if (burnRate >= 0.3) {
-    return 1;
-  }
-  return 0;
-}
-
 export function getBreakMinutes(burnRate, fatigueDetected) {
   if (fatigueDetected || burnRate > 0.7) {
     return 15;
@@ -65,7 +42,8 @@ export function getFlowDeviation(session, baseline) {
     return { state: "stable", ratio: 1, penalty: 0 };
   }
 
-  const currentAvg = average(session.completedTasks.map((task) => task.durationSeconds)) || baseline.avgTaskSeconds;
+  const currentAvg =
+    average(session.completedTasks.map((task) => task.durationSeconds)) || baseline.avgTaskSeconds;
   const ratio = currentAvg / baseline.avgTaskSeconds;
 
   if (ratio <= 1.1) {

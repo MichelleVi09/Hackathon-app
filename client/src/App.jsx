@@ -12,10 +12,10 @@ import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import {
   average,
   getBreakMinutes,
-  getSetupAvailability,
-  normalizeHistory,
   getFlowBaseline,
-  getFlowDeviation
+  getFlowDeviation,
+  getSetupAvailability,
+  normalizeHistory
 } from "./lib/wellbeing.js";
 
 function createSession() {
@@ -34,7 +34,9 @@ function getAdaptiveBurnRate(session, baseline) {
   if (!baseline || !baseline.avgTaskSeconds || !baseline.avgSessionSeconds) {
     return 0;
   }
-  const currentAvgTask = average(session.completedTasks.map((task) => task.durationSeconds)) || baseline.avgTaskSeconds;
+
+  const currentAvgTask =
+    average(session.completedTasks.map((task) => task.durationSeconds)) || baseline.avgTaskSeconds;
   const paceRatio = baseline.avgTaskSeconds / Math.max(currentAvgTask, 1);
   const durationRatio = session.elapsedSeconds / Math.max(baseline.avgSessionSeconds, 1);
 
@@ -58,18 +60,23 @@ export default function App() {
   const [breakLogs, setBreakLogs] = useLocalStorage(STORAGE_KEYS.breakLogs, []);
   const [session, setSession] = useState(createSession);
   const [apiBurnRate, setApiBurnRate] = useState(0.18);
-  const [burnRate, setBurnRate] = useState(0.18);
   const [breakOpen, setBreakOpen] = useState(false);
   const [banner, setBanner] = useState("");
   const [snoozeCount, setSnoozeCount] = useState(0);
-  const [escalateOnNext, setEscalateOnNext] = useState(false);
-  const [fatigueStatus, setFatigueStatus] = useState({ fatigueDetected: false, connected: false });
+  const [fatigueStatus, setFatigueStatus] = useState({
+    fatigueDetected: false,
+    connected: false,
+    confidence: 0
+  });
   const [breakCredit, setBreakCredit] = useState(0);
-  const [breakContext, setBreakContext] = useState({ noSnooze: false, reason: "manual", beforeBurnRate: 0 });
+  const [breakContext, setBreakContext] = useState({
+    noSnooze: false,
+    reason: "manual",
+    beforeBurnRate: 0
+  });
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [flowState, setFlowState] = useState("stable");
   const [flowRatio, setFlowRatio] = useState(1);
-  const [flowPenalty, setFlowPenalty] = useState(0);
   const [notificationState, setNotificationState] = useState(null);
   const [lastApiUpdatedAt, setLastApiUpdatedAt] = useState(0);
   const apiRefreshRef = useRef(0);
@@ -89,19 +96,22 @@ export default function App() {
 
   const flowBaseline = useMemo(() => getFlowBaseline(sessions), [sessions]);
   const flowDeviation = useMemo(() => getFlowDeviation(session, flowBaseline), [session, flowBaseline]);
-
-  useEffect(() => {
-    setFlowState(flowDeviation.state);
-    setFlowRatio(flowDeviation.ratio);
-    setFlowPenalty(flowDeviation.penalty);
-  }, [flowDeviation]);
-
   const adaptiveBurnRate = useMemo(() => getAdaptiveBurnRate(session, baseline), [session, baseline]);
-  const effectiveBurnRate = Math.max(apiBurnRate, adaptiveBurnRate, flowDeviation.penalty, fatigueStatus.fatigueDetected ? 0.6 : 0);
+  const effectiveBurnRate = Math.max(
+    apiBurnRate,
+    adaptiveBurnRate,
+    flowDeviation.penalty,
+    fatigueStatus.fatigueDetected ? 0.6 : 0
+  );
   const breakMinutes = useMemo(
     () => getBreakMinutes(effectiveBurnRate, fatigueStatus.fatigueDetected),
     [effectiveBurnRate, fatigueStatus.fatigueDetected]
   );
+
+  useEffect(() => {
+    setFlowState(flowDeviation.state);
+    setFlowRatio(flowDeviation.ratio);
+  }, [flowDeviation]);
 
   function dismissToast() {
     if (activeToastIdRef.current) {
@@ -118,18 +128,21 @@ export default function App() {
 
   function triggerFullBreakMode({ noSnooze, reason }) {
     dismissToast();
-    setBanner(noSnooze ? "Wellby is stepping in - your burn rate is high. Let's take a proper break." : "You've snoozed twice - Wellby thinks it's really time now. Let's recharge!");
+    setBanner(
+      noSnooze
+        ? "Wellby is stepping in - your burn rate is high. Let's take a proper break."
+        : "You've snoozed twice - Wellby thinks it's really time now. Let's recharge!"
+    );
     setNotificationState("high");
     setBreakContext({ noSnooze, reason, beforeBurnRate: effectiveBurnRate });
     setBreakOpen(true);
   }
 
   function handleSnooze() {
-    const newCount = snoozeCount + 1;
-    setSnoozeCount(newCount);
+    const nextCount = snoozeCount + 1;
+    setSnoozeCount(nextCount);
     dismissToast();
-    if (newCount >= 2) {
-      setEscalateOnNext(true);
+    if (nextCount >= 2) {
       escalateOnNextRef.current = true;
       setBanner("One more check-in and Wellby will ask for a real break.");
     }
@@ -139,7 +152,7 @@ export default function App() {
     if (activeToastIdRef.current) {
       return;
     }
-    dismissToast();
+
     setNotificationState("mild");
     const toastId = toast.custom(
       <MildToast
@@ -159,6 +172,7 @@ export default function App() {
       />,
       { duration: Infinity }
     );
+
     activeToastIdRef.current = toastId;
   }
 
@@ -179,6 +193,7 @@ export default function App() {
 
     const averageTaskSeconds =
       average(session.completedTasks.map((task) => task.durationSeconds)) || baseline?.avgTaskSeconds || 2400;
+
     const burnoutPayload = {
       mental_fatigue_score: Number(
         Math.min(
@@ -217,7 +232,6 @@ export default function App() {
         }
         const adjusted = Math.max(0, Number((Number(data.burn_rate ?? 0) - breakCredit).toFixed(2)));
         setApiBurnRate(adjusted);
-        setBurnRate(Math.max(adjusted, adaptiveBurnRate));
         if (breakCredit > 0) {
           setBreakCredit(0);
         }
@@ -225,7 +239,11 @@ export default function App() {
         setHistory((current) =>
           normalizeHistory([
             ...current.filter((entry) => entry.sessionId !== session.startedAt),
-            { sessionId: session.startedAt, burnRate: Math.max(adjusted, adaptiveBurnRate), timestamp: new Date().toISOString() }
+            {
+              sessionId: session.startedAt,
+              burnRate: Math.max(adjusted, adaptiveBurnRate, flowDeviation.penalty),
+              timestamp: new Date().toISOString()
+            }
           ])
         );
       })
@@ -246,14 +264,11 @@ export default function App() {
     session.moodScore,
     baseline,
     breakCredit,
-    setHistory,
     session.startedAt,
-    adaptiveBurnRate
+    adaptiveBurnRate,
+    flowDeviation.penalty,
+    setHistory
   ]);
-
-  useEffect(() => {
-    setBurnRate(Math.max(apiBurnRate, adaptiveBurnRate, flowPenalty, fatigueStatus.fatigueDetected ? 0.6 : 0));
-  }, [apiBurnRate, adaptiveBurnRate, flowPenalty, fatigueStatus.fatigueDetected]);
 
   useEffect(() => {
     if (!fatigueOptIn || !profile) {
@@ -265,15 +280,15 @@ export default function App() {
         .then((response) => response.json())
         .then((data) => {
           const confidence = Number(data.confidence ?? 0);
-          const fatigueDetected = confidence >= 0.6 && Boolean(data.fatigueDetected);
           setFatigueStatus({
             connected: data.connected ?? true,
-            fatigueDetected,
-            confidence,
-            raw: data
+            fatigueDetected: confidence >= 0.6 && Boolean(data.fatigueDetected),
+            confidence
           });
         })
-        .catch(() => setFatigueStatus({ fatigueDetected: false, connected: false, confidence: 0 }));
+        .catch(() => {
+          setFatigueStatus({ fatigueDetected: false, connected: false, confidence: 0 });
+        });
     };
 
     poll();
@@ -309,7 +324,15 @@ export default function App() {
     if (notificationState !== "mild") {
       showMildToast();
     }
-  }, [effectiveBurnRate, fatigueStatus.fatigueDetected, profile, breakOpen, notificationState, lastApiUpdatedAt]);
+  }, [
+    profile,
+    breakOpen,
+    effectiveBurnRate,
+    fatigueStatus.fatigueDetected,
+    flowState,
+    lastApiUpdatedAt,
+    notificationState
+  ]);
 
   function completeCurrentSession() {
     const taskDurations = session.completedTasks.map((task) => task.durationSeconds);
@@ -320,13 +343,15 @@ export default function App() {
       completedTasks: session.completedTasks.length,
       breakTakenAt: new Date().toISOString()
     };
+
     setSessions((current) => [...current, summary]);
-    setBreakLogs((current) => [...current, { timestamp: summary.breakTakenAt, durationMinutes: breakMinutes }]);
+    setBreakLogs((current) => [
+      ...current,
+      { timestamp: summary.breakTakenAt, durationMinutes: breakMinutes }
+    ]);
     setBreakCredit(0.1);
     setApiBurnRate((current) => Math.max(0, Number((current - 0.1).toFixed(2))));
-    setBurnRate((current) => Math.max(0, Number((current - 0.1).toFixed(2))));
     setSnoozeCount(0);
-    setEscalateOnNext(false);
     escalateOnNextRef.current = false;
     clearAllNotifications();
     setSession(createSession());
@@ -336,6 +361,7 @@ export default function App() {
     if (!session.taskInput.trim()) {
       return;
     }
+
     setSession((current) => ({
       ...current,
       actions: current.actions + 1,
@@ -353,6 +379,7 @@ export default function App() {
       if (!current.activeTask) {
         return current;
       }
+
       return {
         ...current,
         actions: current.actions + 1,
@@ -399,7 +426,6 @@ export default function App() {
         burnRate={effectiveBurnRate}
         flowState={flowState}
         flowRatio={flowRatio}
-        history={history}
         statusText={
           effectiveBurnRate < 0.3
             ? "Your pace looks sustainable right now."
@@ -408,7 +434,7 @@ export default function App() {
               : "Your system is asking for a real pause before work gets heavier."
         }
         breakMinutes={breakMinutes}
-        fatigueOptIn={fatigueOptIn}
+        history={history}
         onTaskInputChange={(value) => setSession((current) => ({ ...current, taskInput: value }))}
         onTaskStart={handleTaskStart}
         onTaskComplete={handleTaskComplete}

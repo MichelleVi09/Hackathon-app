@@ -1,19 +1,17 @@
 export const STORAGE_KEYS = {
   profile: "wellby.profile",
-  theme: "wellby.theme",
   history: "wellby.burnHistory",
   sessions: "wellby.sessions",
-  flowHistory: "wellby.flowHistory",
   fatigueOptIn: "wellby.fatigueOptIn",
   breakLogs: "wellby.breakLogs",
   gameScores: "wellby.gameScores"
 };
 
 export const GAME_OPTIONS = [
-  { id: "snake", label: "Snake", emoji: "🐍" },
-  { id: "chess", label: "Chess", emoji: "♟️" },
-  { id: "tictactoe", label: "Tic Tac Toe", emoji: "✏️" },
-  { id: "uno", label: "UNO", emoji: "🃏" }
+  { id: "snake", label: "Snake", emoji: "S" },
+  { id: "chess", label: "Chess", emoji: "C" },
+  { id: "tictactoe", label: "Tic Tac Toe", emoji: "T" },
+  { id: "uno", label: "UNO", emoji: "U" }
 ];
 
 export const SENIORITY_OPTIONS = [

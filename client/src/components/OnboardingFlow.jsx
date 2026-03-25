@@ -44,7 +44,10 @@ export default function OnboardingFlow({ onComplete }) {
   ];
 
   return (
-    <div className="min-h-screen px-6 py-10 font-body" style={{ background: colors.dashBg, color: colors.secondaryText }}>
+    <div
+      className="min-h-screen px-6 py-10 font-body"
+      style={{ background: colors.dashBg, color: colors.secondaryText }}
+    >
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <motion.section
           initial={{ opacity: 0, y: 24 }}
@@ -55,7 +58,9 @@ export default function OnboardingFlow({ onComplete }) {
           <div className="mb-8 flex items-center gap-4">
             <LeafIcon className="h-14 w-14" primary={colors.primary} secondary={colors.secondary} />
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em]" style={{ color: colors.muted }}>Wellby</p>
+              <p className="text-sm font-bold uppercase tracking-[0.22em]" style={{ color: colors.muted }}>
+                Wellby
+              </p>
               <h1 className="font-display text-5xl leading-tight">Work well. Rest well. Be well.</h1>
             </div>
           </div>
@@ -71,9 +76,15 @@ export default function OnboardingFlow({ onComplete }) {
                 onClick={() => redirectTo(button.target)}
                 className="rounded-full px-5 py-3 text-sm font-bold transition"
                 style={{
-                  background: button.target === "wellby-onboarding-form" ? colors.primary : colors.secondary,
-                  color: button.target === "wellby-onboarding-form" ? colors.primaryText : colors.secondaryText,
-                  border: `1px solid ${button.target === "wellby-onboarding-form" ? colors.primary : colors.cardBorder}`
+                  background:
+                    button.target === "wellby-onboarding-form" ? colors.primary : colors.secondary,
+                  color:
+                    button.target === "wellby-onboarding-form"
+                      ? colors.primaryText
+                      : colors.secondaryText,
+                  border: `1px solid ${
+                    button.target === "wellby-onboarding-form" ? colors.primary : colors.cardBorder
+                  }`
                 }}
               >
                 {button.label}
@@ -87,7 +98,11 @@ export default function OnboardingFlow({ onComplete }) {
                 type="button"
                 onClick={() => redirectTo(item.target)}
                 className="rounded-[24px] p-4 text-left text-sm font-semibold transition hover:translate-y-[-2px]"
-                style={{ background: colors.secondary, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}
+                style={{
+                  background: colors.secondary,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.cardBorder}`
+                }}
               >
                 {item.text}
               </button>
@@ -107,18 +122,22 @@ export default function OnboardingFlow({ onComplete }) {
           <h2 className="font-display text-3xl">Let's make Wellby yours</h2>
           <div className="mt-6 space-y-5">
             <label className="block" id="name-field">
-              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Name</span>
+              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
+                Name
+              </span>
               <input
                 value={form.name}
                 onChange={(event) => updateField("name", event.target.value)}
                 placeholder="Alex"
-                className="w-full rounded-2xl border-0 px-4 py-3 text-lg outline-none ring-2 ring-transparent transition"
+                className="w-full rounded-2xl border-0 px-4 py-3 text-lg outline-none"
                 style={{ background: colors.secondary, color: colors.secondaryText }}
               />
             </label>
 
             <label className="block" id="work-hours-field">
-              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Typical Daily Work Hours</span>
+              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
+                Typical Daily Work Hours
+              </span>
               <input
                 type="range"
                 min="4"
@@ -128,15 +147,19 @@ export default function OnboardingFlow({ onComplete }) {
                 className="w-full"
                 style={{ accentColor: colors.primary }}
               />
-              <p className="mt-2 text-sm font-semibold" style={{ color: colors.muted }}>{form.workHours} hours</p>
+              <p className="mt-2 text-sm font-semibold" style={{ color: colors.muted }}>
+                {form.workHours} hours
+              </p>
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Work Setup</span>
+              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
+                Work Setup
+              </span>
               <select
                 value={form.setup}
                 onChange={(event) => updateField("setup", event.target.value)}
-                className="w-full rounded-2xl border-0 px-4 py-3 outline-none ring-2 ring-transparent"
+                className="w-full rounded-2xl border-0 px-4 py-3 outline-none"
                 style={{ background: colors.secondary, color: colors.secondaryText }}
               >
                 <option value="wfh">WFH</option>
@@ -146,11 +169,13 @@ export default function OnboardingFlow({ onComplete }) {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Job Seniority</span>
+              <span className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
+                Job Seniority
+              </span>
               <select
                 value={form.seniority}
                 onChange={(event) => updateField("seniority", Number(event.target.value))}
-                className="w-full rounded-2xl border-0 px-4 py-3 outline-none ring-2 ring-transparent"
+                className="w-full rounded-2xl border-0 px-4 py-3 outline-none"
                 style={{ background: colors.secondary, color: colors.secondaryText }}
               >
                 {SENIORITY_OPTIONS.map((option) => (
@@ -162,7 +187,9 @@ export default function OnboardingFlow({ onComplete }) {
             </label>
 
             <fieldset id="favorite-game-field">
-              <legend className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Favorite Break Game</legend>
+              <legend className="mb-2 block text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
+                Favorite Break Game
+              </legend>
               <div className="grid grid-cols-2 gap-3">
                 {GAME_OPTIONS.map((game) => (
                   <button
@@ -172,8 +199,11 @@ export default function OnboardingFlow({ onComplete }) {
                     className="rounded-2xl px-4 py-4 text-left transition"
                     style={{
                       background: form.favoriteGame === game.id ? colors.primary : colors.secondary,
-                      color: form.favoriteGame === game.id ? colors.primaryText : colors.secondaryText,
-                      border: `1px solid ${form.favoriteGame === game.id ? colors.primary : colors.cardBorder}`
+                      color:
+                        form.favoriteGame === game.id ? colors.primaryText : colors.secondaryText,
+                      border: `1px solid ${
+                        form.favoriteGame === game.id ? colors.primary : colors.cardBorder
+                      }`
                     }}
                   >
                     <div className="text-2xl">{game.emoji}</div>
@@ -186,9 +216,14 @@ export default function OnboardingFlow({ onComplete }) {
             <div
               id="privacy-note"
               className="rounded-[24px] p-4 text-sm leading-6"
-              style={{ background: colors.secondary, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}
+              style={{
+                background: colors.secondary,
+                color: colors.secondaryText,
+                border: `1px solid ${colors.cardBorder}`
+              }}
             >
-              If you enable webcam fatigue detection later, processing stays on your device. Nothing leaves your machine.
+              If you enable webcam fatigue detection later, processing stays on your device. Nothing
+              leaves your machine.
             </div>
           </div>
 

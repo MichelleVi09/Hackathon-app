@@ -2,7 +2,15 @@ import { useContext, useEffect } from "react";
 import { ThemeContext } from "../context/ThemeContext.jsx";
 import LeafIcon from "./LeafIcon.jsx";
 
-export default function MildToast({ burnRate, flowState, flowRatio, onDismiss, onSnooze, onTakeBreak, snoozeCount }) {
+export default function MildToast({
+  burnRate,
+  flowState,
+  flowRatio,
+  onDismiss,
+  onSnooze,
+  onTakeBreak,
+  snoozeCount
+}) {
   const { colors } = useContext(ThemeContext);
 
   useEffect(() => {
@@ -18,9 +26,7 @@ export default function MildToast({ burnRate, flowState, flowRatio, onDismiss, o
       style={{
         background: colors.cardBg,
         borderColor: colors.cardBorder,
-        color: colors.secondaryText,
-        transform: "translateY(0)",
-        transition: "transform 220ms ease, opacity 220ms ease"
+        color: colors.secondaryText
       }}
     >
       <div className="flex items-start gap-3">
@@ -28,13 +34,15 @@ export default function MildToast({ burnRate, flowState, flowRatio, onDismiss, o
         <div className="flex-1">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-extrabold">Heads up - you may be drifting out of flow</h3>
+              <h3 className="text-sm font-extrabold">Heads up - you've been at it a while</h3>
               <p className="mt-1 text-sm" style={{ color: colors.muted }}>
-                Your pace is {flowState} &mdash; {Math.round((flowRatio - 1) * 100)}% slower than your current baseline.
+                Your burn rate is climbing. A short break might help, but no pressure just yet!
               </p>
-              <p className="mt-1 text-xs" style={{ color: colors.muted }}>
-                Mild alert level. Keep going if you want, or choose a break to avoid burnout.
-              </p>
+              {flowRatio > 1 ? (
+                <p className="mt-1 text-xs" style={{ color: colors.muted }}>
+                  Current flow: {flowState} - {Math.round((flowRatio - 1) * 100)}% slower than baseline.
+                </p>
+              ) : null}
             </div>
             <div
               className="rounded-full border px-3 py-1 text-xs font-bold"
