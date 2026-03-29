@@ -180,8 +180,8 @@ export default function UnoGame({ onExit }) {
   }
 
   return (
-    <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-2xl">UNO</h3>
           <p className="text-sm">Single-player vs two simple AI opponents.</p>
@@ -190,7 +190,7 @@ export default function UnoGame({ onExit }) {
           End Break & Return to Work
         </button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
         <aside className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
           <div className="text-sm font-bold">Discard pile</div>
           <div className="mt-3 rounded-[24px] p-5 text-center font-bold" style={{ background: colors.cardBg }}>{cardLabel(state.topCard)}</div>

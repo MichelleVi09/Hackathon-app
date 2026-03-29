@@ -77,8 +77,8 @@ export default function TicTacToeGame({ onExit }) {
   }
 
   return (
-    <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-2xl">Tic Tac Toe</h3>
           <p className="text-sm">Perfect-play AI or pass-and-play on the same screen.</p>
@@ -87,7 +87,7 @@ export default function TicTacToeGame({ onExit }) {
           End Break & Return to Work
         </button>
       </div>
-      <div className="mb-4 flex gap-3">
+      <div className="mb-6 flex flex-wrap gap-3">
         <button
           onClick={() => {
             setMode("ai");
@@ -109,19 +109,21 @@ export default function TicTacToeGame({ onExit }) {
           Two-player
         </button>
       </div>
-      <div className="mx-auto grid w-full max-w-xs grid-cols-3 gap-3">
-        {board.map((cell, index) => (
-          <button
-            key={index}
-            onClick={() => play(index)}
-            className="aspect-square rounded-[22px] text-4xl font-extrabold shadow-sm transition hover:scale-[1.02]"
-            style={{ background: colors.secondary, color: colors.secondaryText }}
-          >
-            {cell}
-          </button>
-        ))}
+      <div className="rounded-[28px] p-5" style={{ background: colors.secondary }}>
+        <div className="mx-auto grid w-full max-w-xs grid-cols-3 gap-3">
+          {board.map((cell, index) => (
+            <button
+              key={index}
+              onClick={() => play(index)}
+              className="aspect-square rounded-[22px] text-4xl font-extrabold shadow-sm transition hover:scale-[1.02]"
+              style={{ background: colors.cardBg, color: colors.secondaryText }}
+            >
+              {cell}
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="font-bold">
           {winner ? (winner === "draw" ? "Draw! Nicely matched." : `${winner} wins!`) : `Turn: ${turn}`}
         </p>
