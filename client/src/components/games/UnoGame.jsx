@@ -1,238 +1,498 @@
-import { useContext, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { ThemeContext } from "../../context/ThemeContext.jsx";
 
-const colors = ["red", "yellow", "green", "blue"];
-const numbers = Array.from({ length: 10 }, (_, value) => ({ type: "number", value }));
-const actions = [{ type: "skip" }, { type: "reverse" }, { type: "draw2" }];
+const UNO_COLORS = ["red", "yellow", "green", "blue"];
+const ACTION_TYPES = ["skip", "reverse", "draw2"];
+const AI_TURN_DELAY_MS = 5000;
 
-function buildDeck() {
-  const deck = [];
-  colors.forEach((color) => {
-    numbers.concat(actions).forEach((card) => {
-      deck.push({ ...card, color, id: `${color}-${card.type}-${card.value ?? ""}-${Math.random()}` });
-    });
-  });
-  for (let index = 0; index < 4; index += 1) {
-    deck.push({ type: "wild", color: "wild", id: `wild-${index}-${Math.random()}` });
-    deck.push({ type: "wild4", color: "wild", id: `wild4-${index}-${Math.random()}` });
-  }
-  return deck.sort(() => Math.random() - 0.5);
-}
-
-function cardLabel(card) {
-  if (card.type === "number") return `${card.color} ${card.value}`;
-  if (card.type === "wild") return "Wild";
-  if (card.type === "wild4") return "Wild +4";
-  return `${card.color} ${card.type}`;
-}
-
-function canPlay(card, topCard) {
-  return (
-    card.color === "wild" ||
-    card.color === topCard.color ||
-    (card.type === "number" && topCard.type === "number" && card.value === topCard.value) ||
-    card.type === topCard.type
-  );
-}
-
-function deepCopyState(state) {
-  return {
-    ...state,
-    deck: [...state.deck],
-    players: state.players.map((hand) => [...hand]),
-    topCard: { ...state.topCard }
-  };
-}
-
-function drawCard(state, playerIndex, count = 1) {
-  const next = deepCopyState(state);
-  for (let index = 0; index < count; index += 1) {
-    if (!next.deck.length) break;
-    next.players[playerIndex].push(next.deck.pop());
+function shuffle(deck) {
+  const next = [...deck];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[randomIndex]] = [next[randomIndex], next[index]];
   }
   return next;
 }
 
-export default function UnoGame({ onExit }) {
-  const { colors } = useContext(ThemeContext);
-  const [state, setState] = useState(() => {
-    const deck = buildDeck();
-    const players = [[], [], []];
-    for (let round = 0; round < 7; round += 1) {
-      for (let player = 0; player < 3; player += 1) {
-        players[player].push(deck.pop());
-      }
+function createCard(type, color, value = null) {
+  return {
+    type,
+    color,
+    value,
+    id: `${color}-${type}-${value ?? "x"}-${crypto.randomUUID()}`
+  };
+}
+
+function buildDeck() {
+  const deck = [];
+
+  UNO_COLORS.forEach((color) => {
+    deck.push(createCard("number", color, 0));
+
+    for (let value = 1; value <= 9; value += 1) {
+      deck.push(createCard("number", color, value));
+      deck.push(createCard("number", color, value));
     }
-    return {
-      deck,
-      players,
-      topCard: deck.pop(),
-      currentPlayer: 0,
-      message: "Your turn."
-    };
+
+    ACTION_TYPES.forEach((type) => {
+      deck.push(createCard(type, color));
+      deck.push(createCard(type, color));
+    });
   });
 
+  for (let index = 0; index < 4; index += 1) {
+    deck.push(createCard("wild", "wild"));
+    deck.push(createCard("wild4", "wild"));
+  }
+
+  return shuffle(deck);
+}
+
+function cardLabel(card) {
+  if (card.type === "number") {
+    return `${card.color} ${card.value}`;
+  }
+  if (card.type === "wild") {
+    return "Wild";
+  }
+  if (card.type === "wild4") {
+    return "Wild +4";
+  }
+  return `${card.color} ${card.type}`;
+}
+
+function cloneState(state) {
+  return {
+    ...state,
+    deck: [...state.deck],
+    players: state.players.map((hand) => [...hand]),
+    discardPile: [...state.discardPile],
+    turnFeed: [...state.turnFeed]
+  };
+}
+
+function nextPlayer(currentPlayer, direction, step = 1, totalPlayers = 3) {
+  return (currentPlayer + direction * step + totalPlayers * 10) % totalPlayers;
+}
+
+function getTopCard(state) {
+  return state.discardPile[state.discardPile.length - 1];
+}
+
+function getActiveColor(state) {
+  const topCard = getTopCard(state);
+  return topCard.color === "wild" ? state.activeColor : topCard.color;
+}
+
+function canPlay(card, state) {
+  const topCard = getTopCard(state);
+  const activeColor = getActiveColor(state);
+
+  if (card.color === "wild") {
+    return true;
+  }
+
+  if (card.color === activeColor) {
+    return true;
+  }
+
+  if (card.type === "number" && topCard.type === "number") {
+    return card.value === topCard.value;
+  }
+
+  if (card.type !== "number" && topCard.type !== "number") {
+    return card.type === topCard.type;
+  }
+
+  return false;
+}
+
+function chooseWildColor(hand) {
+  const counts = UNO_COLORS.reduce((accumulator, color) => ({ ...accumulator, [color]: 0 }), {});
+  hand.forEach((card) => {
+    if (counts[card.color] !== undefined) {
+      counts[card.color] += 1;
+    }
+  });
+
+  return UNO_COLORS.reduce((bestColor, color) =>
+    counts[color] > counts[bestColor] ? color : bestColor
+  , "red");
+}
+
+function replenishDeck(next) {
+  if (next.deck.length || next.discardPile.length <= 1) {
+    return;
+  }
+
+  const topCard = next.discardPile.pop();
+  next.deck = shuffle(next.discardPile);
+  next.discardPile = [topCard];
+}
+
+function drawCards(next, playerIndex, count) {
+  for (let index = 0; index < count; index += 1) {
+    replenishDeck(next);
+    if (!next.deck.length) {
+      break;
+    }
+    next.players[playerIndex].push(next.deck.pop());
+  }
+}
+
+function applyCard(next, playerIndex, card, actorLabel) {
+  next.players[playerIndex] = next.players[playerIndex].filter((item) => item.id !== card.id);
+  next.discardPile.push(card);
+  next.hasDrawnThisTurn = false;
+
+  if (card.color === "wild") {
+    next.activeColor = chooseWildColor(next.players[playerIndex]);
+  } else {
+    next.activeColor = card.color;
+  }
+
+  if (next.players[playerIndex].length === 0) {
+    next.currentPlayer = playerIndex;
+    next.message = `${actorLabel} won the round!`;
+    return;
+  }
+
+  if (next.players[playerIndex].length === 1) {
+    next.message = `${actorLabel} called UNO!`;
+  }
+
+  const immediateNext = nextPlayer(playerIndex, next.direction);
+
+  if (card.type === "skip") {
+    next.currentPlayer = nextPlayer(playerIndex, next.direction, 2);
+    next.message = `${actorLabel} played Skip.`;
+    next.turnFeed = [`${actorLabel} played Skip.`, ...next.turnFeed].slice(0, 6);
+    return;
+  }
+
+  if (card.type === "reverse") {
+    next.direction *= -1;
+    next.currentPlayer = nextPlayer(playerIndex, next.direction);
+    next.message = `${actorLabel} reversed play.`;
+    next.turnFeed = [`${actorLabel} reversed play.`, ...next.turnFeed].slice(0, 6);
+    return;
+  }
+
+  if (card.type === "draw2") {
+    drawCards(next, immediateNext, 2);
+    next.currentPlayer = nextPlayer(playerIndex, next.direction, 2);
+    next.message = `${actorLabel} played Draw Two.`;
+    next.turnFeed = [`${actorLabel} played Draw Two.`, ...next.turnFeed].slice(0, 6);
+    return;
+  }
+
+  if (card.type === "wild4") {
+    drawCards(next, immediateNext, 4);
+    next.currentPlayer = nextPlayer(playerIndex, next.direction, 2);
+    next.message = `${actorLabel} played Wild Draw Four and chose ${next.activeColor}.`;
+    next.turnFeed = [`${actorLabel} played Wild Draw Four and chose ${next.activeColor}.`, ...next.turnFeed].slice(0, 6);
+    return;
+  }
+
+  if (card.type === "wild") {
+    next.currentPlayer = immediateNext;
+    next.message = `${actorLabel} chose ${next.activeColor}.`;
+    next.turnFeed = [`${actorLabel} played Wild and chose ${next.activeColor}.`, ...next.turnFeed].slice(0, 6);
+    return;
+  }
+
+  next.currentPlayer = immediateNext;
+  next.message = `${actorLabel} played ${cardLabel(card)}.`;
+  next.turnFeed = [`${actorLabel} played ${cardLabel(card)}.`, ...next.turnFeed].slice(0, 6);
+}
+
+function bestPlayableCard(hand, state) {
+  const playable = hand.filter((card) => canPlay(card, state));
+  const priority = {
+    draw2: 0,
+    skip: 1,
+    reverse: 2,
+    number: 3,
+    wild: 4,
+    wild4: 5
+  };
+
+  playable.sort((left, right) => priority[left.type] - priority[right.type]);
+  return playable[0] ?? null;
+}
+
+function createInitialState() {
+  const deck = buildDeck();
+  const players = [[], [], []];
+
+  for (let round = 0; round < 7; round += 1) {
+    for (let player = 0; player < players.length; player += 1) {
+      players[player].push(deck.pop());
+    }
+  }
+
+  let topCard = deck.pop();
+  while (topCard.type === "wild" || topCard.type === "wild4") {
+    deck.unshift(topCard);
+    topCard = deck.pop();
+  }
+
+  return {
+    deck,
+    players,
+    discardPile: [topCard],
+    currentPlayer: 0,
+    direction: 1,
+    activeColor: topCard.color,
+    hasDrawnThisTurn: false,
+    message: "Your turn.",
+    turnFeed: [`Round started with ${cardLabel(topCard)}.`]
+  };
+}
+
+export default function UnoGame({ onExit }) {
+  const { colors } = useContext(ThemeContext);
+  const [state, setState] = useState(createInitialState);
+  const [selectedCardId, setSelectedCardId] = useState(null);
+  const [isAiThinking, setIsAiThinking] = useState(false);
   const winner = useMemo(() => state.players.findIndex((hand) => hand.length === 0), [state.players]);
+  const selectedCard = state.players[0].find((card) => card.id === selectedCardId) ?? null;
 
-  function advanceTurn(next, offset = 1) {
-    next.currentPlayer = (next.currentPlayer + offset) % 3;
-  }
+  useEffect(() => {
+    if (state.currentPlayer === 0 || winner !== -1) {
+      setIsAiThinking(false);
+      return;
+    }
 
-  function applyCardEffect(next, card) {
-    if (card.type === "skip") {
-      advanceTurn(next, 2);
-      next.message = "Skip!";
-      return;
-    }
-    if (card.type === "reverse") {
-      advanceTurn(next, 2);
-      next.message = "Reverse played. In three-player Wellby, that acts like a skip.";
-      return;
-    }
-    if (card.type === "draw2") {
-      const target = (next.currentPlayer + 1) % 3;
-      const updated = drawCard(next, target, 2);
-      next.players = updated.players;
-      advanceTurn(next, 2);
-      next.message = "Draw Two!";
-      return;
-    }
-    if (card.type === "wild4") {
-      const target = (next.currentPlayer + 1) % 3;
-      const updated = drawCard(next, target, 4);
-      next.players = updated.players;
-      advanceTurn(next, 2);
-      next.message = "Wild Draw Four!";
-      return;
-    }
-    advanceTurn(next, 1);
-    next.message = "Nice play.";
-  }
+    setIsAiThinking(true);
+    const timer = setTimeout(() => {
+      setState((current) => {
+        const next = cloneState(current);
+        const playerIndex = next.currentPlayer;
+        const card = bestPlayableCard(next.players[playerIndex], next);
 
-  function takeAiTurns() {
-    setState((current) => {
-      let next = deepCopyState(current);
-      while (next.currentPlayer !== 0 && next.players.every((hand) => hand.length > 0)) {
-        const player = next.currentPlayer;
-        const playable = next.players[player].find((card) => canPlay(card, next.topCard));
-        if (!playable) {
-          next = drawCard(next, player, 1);
-          const drawn = next.players[player][next.players[player].length - 1];
-          if (drawn && canPlay(drawn, next.topCard)) {
-            next.players[player].pop();
-            next.topCard = {
-              ...drawn,
-              color: drawn.color === "wild" ? colors[Math.floor(Math.random() * colors.length)] : drawn.color
-            };
-            applyCardEffect(next, next.topCard);
+        if (!card) {
+          drawCards(next, playerIndex, 1);
+          const drawnCard = next.players[playerIndex][next.players[playerIndex].length - 1];
+
+          if (drawnCard && canPlay(drawnCard, next)) {
+            applyCard(next, playerIndex, drawnCard, `Player ${playerIndex + 1}`);
           } else {
-            advanceTurn(next, 1);
-            next.message = `Player ${player + 1} drew a card.`;
+            next.currentPlayer = nextPlayer(playerIndex, next.direction);
+            next.message = `Player ${playerIndex + 1} drew and passed.`;
+            next.turnFeed = [`Player ${playerIndex + 1} drew and passed.`, ...next.turnFeed].slice(0, 6);
           }
         } else {
-          next.players[player] = next.players[player].filter((card) => card.id !== playable.id);
-          next.topCard = {
-            ...playable,
-            color: playable.color === "wild" ? colors[Math.floor(Math.random() * colors.length)] : playable.color
-          };
-          applyCardEffect(next, next.topCard);
-          if (next.players[player].length === 1) {
-            next.message = `Player ${player + 1} shouted UNO!`;
-          }
+          applyCard(next, playerIndex, card, `Player ${playerIndex + 1}`);
         }
-      }
-      return next;
-    });
-  }
 
-  function playCard(card) {
-    if (winner !== -1 || !canPlay(card, state.topCard) || state.currentPlayer !== 0) {
-      return;
-    }
-    const next = deepCopyState(state);
-    next.players[0] = next.players[0].filter((item) => item.id !== card.id);
-    next.topCard = {
-      ...card,
-      color: card.color === "wild" ? colors[Math.floor(Math.random() * colors.length)] : card.color
-    };
-    applyCardEffect(next, next.topCard);
-    if (next.players[0].length === 1) {
-      next.message = "You yelled UNO!";
-    }
-    setState(next);
+        if (next.currentPlayer === 0 && next.players.every((hand) => hand.length > 0)) {
+          next.message = "Your turn.";
+        }
 
-    setTimeout(() => {
-      takeAiTurns();
-    }, 600);
+        return next;
+      });
+      setIsAiThinking(false);
+    }, AI_TURN_DELAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [state.currentPlayer, winner]);
+
+  useEffect(() => {
+    setSelectedCardId(null);
+  }, [state.currentPlayer]);
+
+  function restart() {
+    setState(createInitialState());
+    setSelectedCardId(null);
+    setIsAiThinking(false);
   }
 
   function drawForPlayer() {
-    if (state.currentPlayer !== 0 || winner !== -1) {
+    if (state.currentPlayer !== 0 || winner !== -1 || state.hasDrawnThisTurn || isAiThinking) {
       return;
     }
-    const next = drawCard(state, 0, 1);
-    advanceTurn(next, 1);
-    next.message = "You drew a card.";
+
+    const next = cloneState(state);
+    drawCards(next, 0, 1);
+    next.hasDrawnThisTurn = true;
+
+    const drawnCard = next.players[0][next.players[0].length - 1];
+    if (drawnCard && canPlay(drawnCard, next)) {
+      next.message = `You drew ${cardLabel(drawnCard)}. You can play it or pass.`;
+      setSelectedCardId(drawnCard.id);
+      next.turnFeed = [`You drew ${cardLabel(drawnCard)}.`, ...next.turnFeed].slice(0, 6);
+    } else {
+      next.currentPlayer = nextPlayer(0, next.direction);
+      next.hasDrawnThisTurn = false;
+      next.message = "You drew and passed.";
+      setSelectedCardId(null);
+      next.turnFeed = ["You drew and passed.", ...next.turnFeed].slice(0, 6);
+    }
+
     setState(next);
-    setTimeout(() => {
-      takeAiTurns();
-    }, 600);
   }
+
+  function passTurn() {
+    if (state.currentPlayer !== 0 || winner !== -1 || !state.hasDrawnThisTurn || isAiThinking) {
+      return;
+    }
+
+    const next = cloneState(state);
+    next.currentPlayer = nextPlayer(0, next.direction);
+    next.hasDrawnThisTurn = false;
+    next.message = "You passed.";
+    setSelectedCardId(null);
+    next.turnFeed = ["You passed.", ...next.turnFeed].slice(0, 6);
+    setState(next);
+  }
+
+  function playSelectedCard() {
+    if (!selectedCard || state.currentPlayer !== 0 || winner !== -1 || isAiThinking || !canPlay(selectedCard, state)) {
+      return;
+    }
+
+    const next = cloneState(state);
+    applyCard(next, 0, selectedCard, "You");
+    setSelectedCardId(null);
+    setState(next);
+  }
+
+  const topCard = getTopCard(state);
+  const activeColor = getActiveColor(state);
 
   return (
     <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="font-display text-2xl">UNO</h3>
-          <p className="text-sm">Single-player vs two simple AI opponents.</p>
+          <p className="text-sm">Single-player vs two AI opponents with slower turns and hidden opponent hands.</p>
         </div>
         <button onClick={onExit} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           End Break & Return to Work
         </button>
       </div>
+
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
         <aside className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
           <div className="text-sm font-bold">Discard pile</div>
-          <div className="mt-3 rounded-[24px] p-5 text-center font-bold" style={{ background: colors.cardBg }}>{cardLabel(state.topCard)}</div>
+          <div className="mt-3 rounded-[24px] p-5 text-center font-bold capitalize" style={{ background: colors.cardBg }}>
+            {cardLabel(topCard)}
+          </div>
+          <p className="mt-3 text-sm font-semibold capitalize">Active color: {activeColor}</p>
           <p className="mt-4 text-sm">{state.message}</p>
           <p className="mt-2 text-sm">Current turn: Player {state.currentPlayer + 1}</p>
-          <button onClick={drawForPlayer} className="mt-4 rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
-            Draw card
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={drawForPlayer}
+              disabled={state.currentPlayer !== 0 || winner !== -1 || state.hasDrawnThisTurn || isAiThinking}
+              className="rounded-full px-4 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: colors.breakBtn, color: colors.breakBtnText }}
+            >
+              Draw card
+            </button>
+            <button
+              onClick={passTurn}
+              disabled={state.currentPlayer !== 0 || winner !== -1 || !state.hasDrawnThisTurn || isAiThinking}
+              className="rounded-full px-4 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: colors.primary, color: colors.primaryText }}
+            >
+              Pass
+            </button>
+            <button
+              onClick={restart}
+              className="rounded-full px-4 py-2 text-sm font-bold"
+              style={{ background: colors.cardBg, color: colors.secondaryText }}
+            >
+              Restart
+            </button>
+          </div>
+          <div className="mt-5">
+            <div className="text-sm font-bold">Recent moves</div>
+            <div className="mt-2 space-y-2 text-sm">
+              {state.turnFeed.map((entry, index) => (
+                <div
+                  key={`${entry}-${index}`}
+                  className="rounded-2xl px-3 py-2"
+                  style={{ background: colors.cardBg }}
+                >
+                  {entry}
+                </div>
+              ))}
+            </div>
+          </div>
         </aside>
+
         <div className="space-y-4">
           {[1, 2].map((player) => (
             <div key={player} className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
-              <div className="font-bold">Player {player + 1}</div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="flex items-center justify-between">
+                <div className="font-bold">Player {player + 1}</div>
+                <div className="text-sm" style={{ color: colors.muted }}>
+                  {state.players[player].length} card{state.players[player].length === 1 ? "" : "s"}
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
                 {state.players[player].map((card) => (
-                  <div key={card.id} className="rounded-xl px-3 py-2 text-xs font-bold" style={{ background: colors.cardBg }}>
-                    {card.color === "wild" ? "Wild" : card.color}
+                  <div
+                    key={card.id}
+                    className="flex h-14 w-10 items-center justify-center rounded-xl text-[10px] font-bold tracking-wide"
+                    style={{ background: colors.primary, color: colors.primaryText }}
+                  >
+                    UNO
                   </div>
                 ))}
               </div>
             </div>
           ))}
+
           <div className="rounded-[24px] p-4" style={{ background: colors.cardBg }}>
             <div className="mb-3 flex items-center justify-between">
               <div className="font-bold">Your hand</div>
               {winner !== -1 ? <div className="text-sm font-bold">{winner === 0 ? "You win!" : `Player ${winner + 1} wins!`}</div> : null}
             </div>
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+              <span style={{ color: colors.muted }}>
+                {selectedCard ? `Selected: ${cardLabel(selectedCard)}` : "Select a card to play."}
+              </span>
+              <button
+                onClick={playSelectedCard}
+                disabled={!selectedCard || state.currentPlayer !== 0 || winner !== -1 || isAiThinking || !canPlay(selectedCard, state)}
+                className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ background: colors.breakBtn, color: colors.breakBtnText }}
+              >
+                Play selected
+              </button>
+              <button
+                onClick={() => setSelectedCardId(null)}
+                disabled={!selectedCard}
+                className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                style={{ background: colors.secondary, color: colors.secondaryText }}
+              >
+                Clear
+              </button>
+            </div>
             <div className="flex flex-wrap gap-3">
-              {state.players[0].map((card) => (
-                <button
-                  key={card.id}
-                  onClick={() => playCard(card)}
-                  className="rounded-[22px] px-4 py-5 text-left text-sm font-bold shadow-sm"
-                  style={{
-                    background: canPlay(card, state.topCard) ? colors.primary : colors.secondary,
-                    color: canPlay(card, state.topCard) ? colors.primaryText : colors.secondaryText,
-                    opacity: canPlay(card, state.topCard) ? 1 : 0.7
-                  }}
-                >
-                  {cardLabel(card)}
-                </button>
-              ))}
+              {state.players[0].map((card) => {
+                const selected = selectedCardId === card.id;
+                const playable = canPlay(card, state) && state.currentPlayer === 0 && !isAiThinking;
+
+                return (
+                  <button
+                    key={card.id}
+                    onClick={() => setSelectedCardId((current) => (current === card.id ? null : card.id))}
+                    className="rounded-[22px] px-4 py-5 text-left text-sm font-bold shadow-sm transition"
+                    style={{
+                      background: colors.cardBg,
+                      color: colors.secondaryText,
+                      opacity: playable ? 1 : 0.6,
+                      boxShadow: selected ? `0 0 0 3px ${colors.burnWarn}` : `inset 0 0 0 1px ${colors.cardBorder}`
+                    }}
+                  >
+                    {cardLabel(card)}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
