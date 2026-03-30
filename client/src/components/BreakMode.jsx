@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import React,{ useContext, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ThemeContext } from "../context/ThemeContext.jsx";
 import { GAME_OPTIONS } from "../lib/constants.js";

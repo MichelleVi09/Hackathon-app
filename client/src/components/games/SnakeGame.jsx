@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import React,{ useContext, useEffect, useRef, useState } from "react";
 import { ThemeContext } from "../../context/ThemeContext.jsx";
 import { STORAGE_KEYS } from "../../lib/constants.js";
 import { readStorage, writeStorage } from "../../lib/storage.js";
