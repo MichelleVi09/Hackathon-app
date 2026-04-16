@@ -36,8 +36,12 @@ router.post("/predict", async (req, res) => {
 
     const burnRate = Number(data.burn_rate ?? data.prediction ?? data.result ?? 0);
     return res.json({
-      source: "burnout-service",
-      burn_rate: clamp(Number.isFinite(burnRate) ? burnRate : 0, 0, 1)
+      source: data.model_source ?? "burnout-service",
+      burn_rate: clamp(Number.isFinite(burnRate) ? burnRate : 0, 0, 1),
+      trained_on_records: data.trained_on_records ?? null,
+      training_mae: data.training_mae ?? null,
+      training_r2: data.training_r2 ?? null,
+      ethics: data.ethics ?? null
     });
   } catch (error) {
     return res.json({

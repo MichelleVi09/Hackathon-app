@@ -9,8 +9,8 @@ Wellby is a friendly AI-powered wellbeing companion for tech industry workers. I
 - Frontend: React + Tailwind CSS
 - Backend: Node.js + Express
 - Local AI services:
-  - Burnout prediction proxy for `usmanbvp/Employees-Burnout-Analysis-and-Prediction`
-  - Facial fatigue proxy for `IgorMoriera/Fatigue_Detection_with_Python`
+  - Local burnout proxy model trained on the Syncora synthetic productivity dataset
+  - Background EAR fatigue detection inspired by `Aeidle/EAR-Fatigue-Detection`
 
 ## Included features
 
@@ -28,13 +28,15 @@ Wellby is a friendly AI-powered wellbeing companion for tech industry workers. I
 
 1. Clone this repo.
 2. Clone the burnout prediction service:
-   - Repository: [usmanbvp/Employees-Burnout-Analysis-and-Prediction](https://github.com/usmanbvp/Employees-Burnout-Analysis-and-Prediction)
-   - `pip install -r requirements.txt`
-   - `python app.py --port 5001`
-3. Clone the fatigue detection service:
-   - Repository: [IgorMoriera/Fatigue_Detection_with_Python](https://github.com/IgorMoriera/Fatigue_Detection_with_Python)
-   - `pip install -r requirements.txt`
-   - `python fatigue_service.py --port 5002`
+   - Included training dataset: [syncora-ai/Synthetic-AI-Developer-Productivity-Dataset](https://github.com/syncora-ai/Synthetic-AI-Developer-Productivity-Dataset)
+   - In this repo install Python dependencies: `pip install -r requirements.txt`
+   - Train the local model: `python train_burnout_model.py`
+   - Run the bundled burnout service: `python flask_api.py --port 5001`
+3. Set up the fatigue detection service:
+   - Reference algorithm: [Aeidle/EAR-Fatigue-Detection](https://github.com/Aeidle/EAR-Fatigue-Detection)
+   - In this repo install the local service dependencies: `pip install -r requirements.txt`
+   - Run the bundled background service: `python fatigue_service.py --port 5002`
+   - The service keeps the webcam monitor running locally in the background and exposes `/start`, `/stop`, and `/status` on port `5002`
 4. In this repo:
    - `npm install`
    - `npm run dev`
@@ -52,8 +54,22 @@ Wellby is a friendly AI-powered wellbeing companion for tech industry workers. I
 - `GET /api/health`
 - `POST /api/burnout/predict`
 - `GET /api/fatigue/status`
+- `POST /api/fatigue/start`
+- `POST /api/fatigue/stop`
 
 The backend proxies the two Python microservices and falls back gracefully if either service is unavailable during local setup.
+
+## Burnout model notes
+
+- The bundled burnout service trains a local `RandomForestRegressor` against the Syncora synthetic developer productivity dataset.
+- The service keeps the existing `/predict` contract and maps Wellby's payload into the trained feature space used by the model.
+- Trained model artifacts are stored in `artifacts/`.
+
+## Ethics and data use
+
+- The Syncora dataset is synthetic and is described by its repo as carrying zero risk of exposing real employee data.
+- The dataset repo frames it for research, education, and experimentation rather than employee surveillance.
+- Wellby treats the trained score as a wellbeing estimate only; it should not be used for HR discipline, ranking, or diagnosis.
 
 ## NPM packages used
 
@@ -66,5 +82,5 @@ The backend proxies the two Python microservices and falls back gracefully if ei
 ## Notes
 
 - Weekly burnout history, session summaries, break logs, and game scores are stored in `localStorage`.
-- The fatigue detection toggle only polls the local service when the user opts in.
+- The fatigue detection toggle starts the local EAR detector in the background when the user opts in and stops it when disabled.
 - After each completed break, Wellby applies a `-0.1` reducing factor to the next burnout score, with a floor of `0.0`.

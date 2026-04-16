@@ -1,0 +1,22 @@
+{
+  "model_name": "wellby-syncora-burnout-proxy",
+  "model_type": "ridge-linear-regression",
+  "dataset_name": "Synthetic AI Developer Productivity Dataset",
+  "dataset_repo": "https://github.com/syncora-ai/Synthetic-AI-Developer-Productivity-Dataset",
+  "row_count": 2000,
+  "feature_columns": [
+    "mental_fatigue_score",
+    "hours_worked",
+    "wfh_setup_available",
+    "designation",
+    "resource_allocation"
+  ],
+  "target_name": "burnout_proxy_score",
+  "mae": 0.0072,
+  "r2": 0.9963,
+  "ethics": {
+    "privacy": "The Syncora repo states the dataset is synthetic, carries zero risk of personal data exposure, and avoids privacy liability from real employee data.",
+    "usage": "The repo describes the dataset as intended for research, educational, and experimental use rather than real-world surveillance.",
+    "limits": "Wellby treats this trained model as a wellbeing estimate, not a diagnostic, performance management, or HR enforcement tool."
+  }
+}
