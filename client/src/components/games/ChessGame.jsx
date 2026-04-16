@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import React,{ useContext, useEffect, useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { ThemeContext } from "../../context/ThemeContext.jsx";
 
@@ -81,6 +81,11 @@ export default function ChessGame({ onExit }) {
   const [captured, setCaptured] = useState({ white: [], black: [] });
 
   const board = useMemo(() => game.board().flat(), [game]);
+  const winnerText = game.isGameOver()
+    ? game.isCheckmate()
+      ? `You ${game.turn() === "b" ? "win" : "lose"}!`
+      : "Game over."
+    : null;
 
   useEffect(() => {
     if (mode !== "ai" || game.turn() !== "b" || game.isGameOver()) {
@@ -146,14 +151,16 @@ export default function ChessGame({ onExit }) {
 
   return (
     <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="font-display text-2xl">Chess</h3>
-          <p className="text-sm">Pass-and-play or a simple depth-3 AI opponent.</p>
-        </div>
-        <button onClick={onExit} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
+      <div className="mb-6 flex flex-col gap-4">
+        <button onClick={onExit} className="self-end rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           End Break & Return to Work
         </button>
+        <div className="rounded-[24px] px-6 py-5 text-center" style={{ background: colors.cardBg, border: `2px solid ${colors.primary}` }}>
+          <h3 className="font-display text-4xl">Chess</h3>
+          <p className="mt-2 text-sm" style={{ color: colors.muted }}>
+            Play pass-and-play or challenge a lighter AI opponent.
+          </p>
+        </div>
       </div>
       <div className="mb-4 flex gap-3">
         <button
@@ -177,8 +184,8 @@ export default function ChessGame({ onExit }) {
           Two-player
         </button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-[auto_220px]">
-        <div className="grid w-full max-w-[520px] grid-cols-8 overflow-hidden rounded-[24px] shadow-lg">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
+        <div className="mx-auto grid w-full max-w-[460px] grid-cols-8 overflow-hidden rounded-[24px] shadow-lg">
           {board.map((piece, index) => {
             const isLight = (Math.floor(index / 8) + index) % 2 === 0;
             const square = algebraic(index);
@@ -190,7 +197,7 @@ export default function ChessGame({ onExit }) {
               <button
                 key={square}
                 onClick={() => handleSquareClick(index)}
-                className="aspect-square text-3xl transition"
+                className="aspect-square text-[2rem] transition"
                 style={{
                   background: isLight ? colors.secondary : colors.primary,
                   color: isLight ? colors.secondaryText : colors.primaryText,
@@ -223,6 +230,32 @@ export default function ChessGame({ onExit }) {
             Reset board
           </button>
         </aside>
+      </div>
+      <div
+        className="mt-5 rounded-[24px] px-5 py-4 text-center"
+        style={{
+          background: winnerText
+            ? winnerText.includes("win")
+              ? colors.pillGoodBg
+              : colors.pillWarnBg
+            : colors.secondary,
+          color: winnerText
+            ? winnerText.includes("win")
+              ? colors.pillGoodText
+              : colors.pillWarnText
+            : colors.secondaryText,
+          border: `1px solid ${
+            winnerText
+              ? winnerText.includes("win")
+                ? colors.pillGoodBorder
+                : colors.pillWarnBorder
+              : colors.cardBorder
+          }`
+        }}
+      >
+        <div className="text-lg font-extrabold">
+          {winnerText ?? `Turn: ${game.turn() === "w" ? "White" : "Black"}`}
+        </div>
       </div>
     </div>
   );

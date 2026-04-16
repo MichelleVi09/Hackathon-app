@@ -21,25 +21,43 @@ function getWinner(board) {
   return board.every(Boolean) ? "draw" : null;
 }
 
-function minimax(board, isMaximizing) {
-  const winner = getWinner(board);
-  if (winner === "O") return { score: 1 };
-  if (winner === "X") return { score: -1 };
-  if (winner === "draw") return { score: 0 };
-
-  const moves = [];
-  board.forEach((cell, index) => {
-    if (!cell) {
-      const nextBoard = [...board];
-      nextBoard[index] = isMaximizing ? "O" : "X";
-      const result = minimax(nextBoard, !isMaximizing);
-      moves.push({ index, score: result.score });
+function findLineMove(board, marker) {
+  for (const [a, b, c] of lines) {
+    const values = [board[a], board[b], board[c]];
+    const markerCount = values.filter((value) => value === marker).length;
+    const emptyIndex = [a, b, c].find((index) => !board[index]);
+    if (markerCount === 2 && emptyIndex !== undefined) {
+      return emptyIndex;
     }
-  });
+  }
+  return null;
+}
 
-  return isMaximizing
-    ? moves.reduce((best, move) => (move.score > best.score ? move : best), { score: -Infinity })
-    : moves.reduce((best, move) => (move.score < best.score ? move : best), { score: Infinity });
+function chooseAiMove(board) {
+  const winningMove = findLineMove(board, "O");
+  if (winningMove !== null) {
+    return winningMove;
+  }
+
+  const shouldBlock = Math.random() > 0.35;
+  if (shouldBlock) {
+    const blockingMove = findLineMove(board, "X");
+    if (blockingMove !== null) {
+      return blockingMove;
+    }
+  }
+
+  const preferredMoves = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+  const availableMoves = preferredMoves.filter((index) => !board[index]);
+  if (!availableMoves.length) {
+    return undefined;
+  }
+
+  if (Math.random() > 0.55) {
+    return availableMoves[0];
+  }
+
+  return availableMoves[Math.floor(Math.random() * availableMoves.length)];
 }
 
 export default function TicTacToeGame({ onExit }) {
@@ -68,7 +86,7 @@ export default function TicTacToeGame({ onExit }) {
       return;
     }
 
-    const aiMove = minimax(nextBoard, true).index;
+    const aiMove = chooseAiMove(nextBoard);
     if (aiMove !== undefined) {
       nextBoard[aiMove] = "O";
       setBoard([...nextBoard]);
@@ -76,16 +94,28 @@ export default function TicTacToeGame({ onExit }) {
     }
   }
 
+  const resultMessage = winner
+    ? winner === "draw"
+      ? "Draw! That round was close."
+      : mode === "ai"
+        ? winner === "X"
+          ? "You win!"
+          : "The computer wins."
+        : `${winner} wins!`
+    : null;
+
   return (
     <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl">Tic Tac Toe</h3>
-          <p className="text-sm">Perfect-play AI or pass-and-play on the same screen.</p>
-        </div>
-        <button onClick={onExit} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
+      <div className="mb-6 flex flex-col gap-4">
+        <button onClick={onExit} className="self-end rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           End Break & Return to Work
         </button>
+        <div className="rounded-[24px] px-6 py-5 text-center" style={{ background: colors.cardBg, border: `2px solid ${colors.primary}` }}>
+          <h3 className="font-display text-4xl">Tic Tac Toe</h3>
+          <p className="mt-2 text-sm" style={{ color: colors.muted }}>
+            Take on the AI or pass and play on the same screen.
+          </p>
+        </div>
       </div>
       <div className="mb-6 flex flex-wrap gap-3">
         <button
@@ -123,10 +153,39 @@ export default function TicTacToeGame({ onExit }) {
           ))}
         </div>
       </div>
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-bold">
-          {winner ? (winner === "draw" ? "Draw! Nicely matched." : `${winner} wins!`) : `Turn: ${turn}`}
-        </p>
+      <div
+        className="mt-5 rounded-[24px] px-5 py-4 text-center"
+        style={{
+          background: resultMessage
+            ? winner === "draw"
+              ? colors.secondary
+              : winner === "X"
+                ? colors.pillGoodBg
+                : colors.pillWarnBg
+            : colors.secondary,
+          color: resultMessage
+            ? winner === "draw"
+              ? colors.secondaryText
+              : winner === "X"
+                ? colors.pillGoodText
+                : colors.pillWarnText
+            : colors.secondaryText,
+          border: `1px solid ${
+            resultMessage
+              ? winner === "draw"
+                ? colors.cardBorder
+                : winner === "X"
+                  ? colors.pillGoodBorder
+                  : colors.pillWarnBorder
+              : colors.cardBorder
+          }`
+        }}
+      >
+        <div className="text-lg font-extrabold">
+          {resultMessage ?? (mode === "ai" ? "Beat the AI or force a draw." : `Turn: ${turn}`)}
+        </div>
+      </div>
+      <div className="mt-6 flex justify-end">
         <button onClick={reset} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           Play again
         </button>

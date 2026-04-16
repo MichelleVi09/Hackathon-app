@@ -5,6 +5,14 @@ const UNO_COLORS = ["red", "yellow", "green", "blue"];
 const ACTION_TYPES = ["skip", "reverse", "draw2"];
 const AI_TURN_DELAY_MS = 5000;
 
+const CARD_STYLES = {
+  red: { background: "#f7d9d3", border: "#df9a8b", text: "#7f3c2e" },
+  yellow: { background: "#f8efc9", border: "#d8bc61", text: "#7a5a00" },
+  green: { background: "#d9f0dd", border: "#8cc39a", text: "#28583a" },
+  blue: { background: "#dbe8fb", border: "#92b3e3", text: "#284a7a" },
+  wild: { background: "#ebe4da", border: "#bba997", text: "#5d4d41" }
+};
+
 function shuffle(deck) {
   const next = [...deck];
   for (let index = next.length - 1; index > 0; index -= 1) {
@@ -59,6 +67,10 @@ function cardLabel(card) {
     return "Wild +4";
   }
   return `${card.color} ${card.type}`;
+}
+
+function getCardTheme(card) {
+  return CARD_STYLES[card.color] ?? CARD_STYLES.wild;
 }
 
 function cloneState(state) {
@@ -360,28 +372,57 @@ export default function UnoGame({ onExit }) {
 
   const topCard = getTopCard(state);
   const activeColor = getActiveColor(state);
+  const currentPlayerLabel = state.currentPlayer === 0 ? "Your turn" : `Player ${state.currentPlayer + 1}'s turn`;
+  const winnerLabel =
+    winner === -1 ? null : winner === 0 ? "You win the round!" : `Player ${winner + 1} wins the round.`;
 
   return (
     <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl">UNO</h3>
-          <p className="text-sm">Single-player vs two AI opponents with slower turns and hidden opponent hands.</p>
-        </div>
-        <button onClick={onExit} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
+      <div className="mb-6 flex flex-col gap-4">
+        <button onClick={onExit} className="self-end rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           End Break & Return to Work
         </button>
+        <div className="rounded-[24px] px-6 py-5 text-center" style={{ background: colors.cardBg, border: `2px solid ${colors.primary}` }}>
+          <h3 className="font-display text-4xl">UNO</h3>
+          <p className="mt-2 text-sm" style={{ color: colors.muted }}>
+            Single-player vs two AI opponents with slower turns and hidden opponent hands.
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
-          <div className="text-sm font-bold">Discard pile</div>
-          <div className="mt-3 rounded-[24px] p-5 text-center font-bold capitalize" style={{ background: colors.cardBg }}>
-            {cardLabel(topCard)}
+      <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <aside className="rounded-[28px] p-5" style={{ background: colors.secondary, border: `1px solid ${colors.cardBorder}` }}>
+          <div className="text-sm font-bold uppercase tracking-[0.16em]" style={{ color: colors.muted }}>Game status</div>
+          <div className="mt-4 rounded-[24px] p-5" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
+            <div className="text-sm font-bold uppercase tracking-[0.14em]" style={{ color: colors.muted }}>Last played</div>
+            <div
+              className="mt-3 rounded-[22px] p-5 text-center font-bold capitalize"
+              style={{
+                background: getCardTheme(topCard).background,
+                color: getCardTheme(topCard).text,
+                border: `1px solid ${getCardTheme(topCard).border}`
+              }}
+            >
+              {cardLabel(topCard)}
+            </div>
+            <p className="mt-4 text-base font-semibold capitalize">Active color: {activeColor}</p>
+            <p className="mt-2 text-base font-bold">{currentPlayerLabel}</p>
+            <p className="mt-3 text-sm leading-7">{state.message}</p>
           </div>
-          <p className="mt-3 text-sm font-semibold capitalize">Active color: {activeColor}</p>
-          <p className="mt-4 text-sm">{state.message}</p>
-          <p className="mt-2 text-sm">Current turn: Player {state.currentPlayer + 1}</p>
+
+          {winnerLabel ? (
+            <div
+              className="mt-4 rounded-[22px] px-4 py-3 text-sm font-extrabold"
+              style={{
+                background: winner === 0 ? colors.pillGoodBg : colors.pillWarnBg,
+                color: winner === 0 ? colors.pillGoodText : colors.pillWarnText,
+                border: `1px solid ${winner === 0 ? colors.pillGoodBorder : colors.pillWarnBorder}`
+              }}
+            >
+              {winnerLabel}
+            </div>
+          ) : null}
+
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={drawForPlayer}
@@ -408,13 +449,13 @@ export default function UnoGame({ onExit }) {
             </button>
           </div>
           <div className="mt-5">
-            <div className="text-sm font-bold">Recent moves</div>
-            <div className="mt-2 space-y-2 text-sm">
+            <div className="text-sm font-bold uppercase tracking-[0.16em]" style={{ color: colors.muted }}>Recent moves</div>
+            <div className="mt-3 space-y-3 text-sm">
               {state.turnFeed.map((entry, index) => (
                 <div
                   key={`${entry}-${index}`}
-                  className="rounded-2xl px-3 py-2"
-                  style={{ background: colors.cardBg }}
+                  className="rounded-[20px] px-4 py-3 leading-7"
+                  style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}
                 >
                   {entry}
                 </div>
@@ -425,18 +466,18 @@ export default function UnoGame({ onExit }) {
 
         <div className="space-y-4">
           {[1, 2].map((player) => (
-            <div key={player} className="rounded-[24px] p-4" style={{ background: colors.secondary }}>
+            <div key={player} className="rounded-[24px] p-4" style={{ background: colors.secondary, border: `1px solid ${colors.cardBorder}` }}>
               <div className="flex items-center justify-between">
                 <div className="font-bold">Player {player + 1}</div>
                 <div className="text-sm" style={{ color: colors.muted }}>
                   {state.players[player].length} card{state.players[player].length === 1 ? "" : "s"}
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-wrap gap-3">
                 {state.players[player].map((card) => (
                   <div
                     key={card.id}
-                    className="flex h-14 w-10 items-center justify-center rounded-xl text-[10px] font-bold tracking-wide"
+                    className="flex h-14 w-11 items-center justify-center rounded-2xl text-xs font-bold tracking-wide"
                     style={{ background: colors.primary, color: colors.primaryText }}
                   >
                     UNO
@@ -446,55 +487,91 @@ export default function UnoGame({ onExit }) {
             </div>
           ))}
 
-          <div className="rounded-[24px] p-4" style={{ background: colors.cardBg }}>
-            <div className="mb-3 flex items-center justify-between">
-              <div className="font-bold">Your hand</div>
-              {winner !== -1 ? <div className="text-sm font-bold">{winner === 0 ? "You win!" : `Player ${winner + 1} wins!`}</div> : null}
+          <div className="rounded-[28px] p-5" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-bold uppercase tracking-[0.16em]" style={{ color: colors.muted }}>Your hand</div>
+                <div className="mt-1 text-lg font-bold">Your cards</div>
+              </div>
+              {winnerLabel ? <div className="text-sm font-bold">{winnerLabel}</div> : null}
             </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-              <span style={{ color: colors.muted }}>
+            <div className="mb-5 rounded-[24px] p-4" style={{ background: colors.secondary, border: `1px solid ${colors.cardBorder}` }}>
+              <div className="flex flex-col gap-3 text-sm">
+                <span className="text-base font-semibold" style={{ color: colors.secondaryText }}>
                 {selectedCard ? `Selected: ${cardLabel(selectedCard)}` : "Select a card to play."}
-              </span>
-              <button
-                onClick={playSelectedCard}
-                disabled={!selectedCard || state.currentPlayer !== 0 || winner !== -1 || isAiThinking || !canPlay(selectedCard, state)}
-                className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ background: colors.breakBtn, color: colors.breakBtnText }}
-              >
-                Play selected
-              </button>
-              <button
-                onClick={() => setSelectedCardId(null)}
-                disabled={!selectedCard}
-                className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
-                style={{ background: colors.secondary, color: colors.secondaryText }}
-              >
-                Clear
-              </button>
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={playSelectedCard}
+                    disabled={!selectedCard || state.currentPlayer !== 0 || winner !== -1 || isAiThinking || !canPlay(selectedCard, state)}
+                    className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: colors.breakBtn, color: colors.breakBtnText }}
+                  >
+                    Play selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedCardId(null)}
+                    disabled={!selectedCard}
+                    className="rounded-full px-4 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: colors.cardBg, color: colors.secondaryText }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               {state.players[0].map((card) => {
                 const selected = selectedCardId === card.id;
                 const playable = canPlay(card, state) && state.currentPlayer === 0 && !isAiThinking;
+                const theme = getCardTheme(card);
 
                 return (
                   <button
                     key={card.id}
                     onClick={() => setSelectedCardId((current) => (current === card.id ? null : card.id))}
-                    className="rounded-[22px] px-4 py-5 text-left text-sm font-bold shadow-sm transition"
+                    className="min-h-[118px] min-w-[96px] rounded-[24px] px-4 py-4 text-left text-sm font-bold shadow-sm transition"
                     style={{
-                      background: colors.cardBg,
-                      color: colors.secondaryText,
+                      background: theme.background,
+                      color: theme.text,
                       opacity: playable ? 1 : 0.6,
-                      boxShadow: selected ? `0 0 0 3px ${colors.burnWarn}` : `inset 0 0 0 1px ${colors.cardBorder}`
+                      boxShadow: selected ? `0 0 0 3px ${colors.burnWarn}` : `inset 0 0 0 1px ${theme.border}`
                     }}
                   >
-                    {cardLabel(card)}
+                    <div className="text-xs font-bold uppercase tracking-[0.14em]">{card.color === "wild" ? "Wild" : card.color}</div>
+                    <div className="mt-3 text-xl font-extrabold">{card.type === "number" ? card.value : card.type === "wild4" ? "+4" : card.type}</div>
+                    <div className="mt-3 text-sm leading-6">{cardLabel(card)}</div>
                   </button>
                 );
               })}
             </div>
           </div>
+        </div>
+      </div>
+      <div
+        className="mt-5 rounded-[24px] px-5 py-4 text-center"
+        style={{
+          background: winnerLabel
+            ? winner === 0
+              ? colors.pillGoodBg
+              : colors.pillWarnBg
+            : colors.secondary,
+          color: winnerLabel
+            ? winner === 0
+              ? colors.pillGoodText
+              : colors.pillWarnText
+            : colors.secondaryText,
+          border: `1px solid ${
+            winnerLabel
+              ? winner === 0
+                ? colors.pillGoodBorder
+                : colors.pillWarnBorder
+              : colors.cardBorder
+          }`
+        }}
+      >
+        <div className="text-lg font-extrabold">
+          {winnerLabel ?? currentPlayerLabel}
         </div>
       </div>
     </div>

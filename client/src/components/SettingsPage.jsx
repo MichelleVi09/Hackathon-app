@@ -1,6 +1,7 @@
-import { useContext } from "react";
+import React,{ useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext.jsx";
 import LeafIcon from "./LeafIcon.jsx";
+import { EXTENSION_PROMPT_INTERVAL_OPTIONS } from "../lib/constants.js";
 
 const THEME_OPTIONS = [
   { id: "warm", label: "Warm", description: "Soft browns and caramels - cozy and grounding", color: "#B5967E" },
@@ -12,6 +13,8 @@ const THEME_OPTIONS = [
 export default function SettingsPage({
   fatigueOptIn,
   onToggleFatigue,
+  extensionPromptInterval,
+  onSetExtensionPromptInterval,
   mode,
   onToggleMode,
   activeTheme,
@@ -97,6 +100,48 @@ export default function SettingsPage({
               >
                 {fatigueOptIn ? "Enabled" : "Disabled"}
               </button>
+            </div>
+
+            <div className="mt-4 rounded-[24px] p-4" style={{ background: colors.secondary }}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="font-bold">Browser check-in timer</h2>
+                  <p className="mt-2 text-sm leading-7" style={{ color: colors.muted }}>
+                    Pick how often the tiny Wellby tab should expand on other websites and ask for a stress check-in.
+                  </p>
+                </div>
+                <div
+                  className="rounded-full px-4 py-2 text-sm font-bold"
+                  style={{ background: colors.sidebarBg, color: colors.wordmark }}
+                >
+                  {extensionPromptInterval} min
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {EXTENSION_PROMPT_INTERVAL_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => onSetExtensionPromptInterval(option.value)}
+                    className="rounded-[22px] border p-4 text-left"
+                    style={{
+                      background:
+                        extensionPromptInterval === option.value ? colors.navActiveBg : colors.cardBg,
+                      borderColor:
+                        extensionPromptInterval === option.value ? colors.navActiveBorder : colors.cardBorder,
+                      color:
+                        extensionPromptInterval === option.value ? colors.navActive : colors.secondaryText
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-bold">{option.label}</span>
+                      {extensionPromptInterval === option.value ? (
+                        <span className="text-sm font-bold">Selected</span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </section>
         </div>

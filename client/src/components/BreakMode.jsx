@@ -103,35 +103,44 @@ export default function BreakMode({ initialGame, onClose, noSnooze, reason, befo
             </div>
           ) : phase === "games" ? (
             <div className="space-y-8">
-              <div className="rounded-[36px] p-6 shadow-glow md:p-8" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="rounded-[40px] p-7 shadow-glow md:p-10" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <p className="text-sm font-bold uppercase tracking-[0.22em]" style={{ color: colors.muted }}>Wellby Game Lounge</p>
-                    <h2 className="font-display text-4xl">Recharge in a way that actually feels fun</h2>
-                    <p className="mt-2 text-sm" style={{ color: colors.muted }}>{breakMessage}</p>
+                    <h2 className="font-display text-4xl md:text-5xl">Recharge in a way that actually feels fun</h2>
+                    <p className="mt-3 max-w-3xl text-base leading-8" style={{ color: colors.muted }}>{breakMessage}</p>
                   </div>
                   <button
                     onClick={() => setPhase("complete")}
-                    className="rounded-full px-5 py-3 font-bold lg:self-start"
+                    className="rounded-full px-6 py-3 font-bold lg:self-start"
                     style={{ background: colors.breakBtn, color: colors.breakBtnText }}
                   >
                     Finish break
                   </button>
                 </div>
-                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-6 rounded-[28px] px-5 py-4" style={{ background: colors.secondary, border: `1px solid ${colors.cardBorder}` }}>
+                  <p className="text-sm leading-7" style={{ color: colors.muted }}>
+                    Pick a game, settle in for a minute, and then head back when you feel reset.
+                    Right now you&apos;re in <span className="font-bold" style={{ color: colors.secondaryText }}>{GAME_OPTIONS.find((game) => game.id === selectedGame)?.label}</span>.
+                  </p>
+                </div>
+                <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
                   {GAME_OPTIONS.map((game) => (
                     <button
                       key={game.id}
                       onClick={() => setSelectedGame(game.id)}
-                      className="min-h-28 rounded-[24px] border px-5 py-6 text-left transition-transform hover:-translate-y-0.5"
+                      className="min-h-32 rounded-[28px] border px-6 py-7 text-left transition-transform hover:-translate-y-0.5"
                       style={{
                         background: selectedGame === game.id ? colors.primary : colors.gameCardBg,
                         color: selectedGame === game.id ? colors.primaryText : colors.secondaryText,
                         borderColor: selectedGame === game.id ? colors.primary : colors.gameCardBorder
                       }}
                     >
-                      <div className="text-3xl">{game.emoji}</div>
-                      <div className="mt-2 font-bold">{game.label}</div>
+                      <div className="text-4xl">{game.emoji}</div>
+                      <div className="mt-3 text-lg font-bold">{game.label}</div>
+                      <div className="mt-2 text-sm" style={{ color: selectedGame === game.id ? colors.primaryText : colors.muted }}>
+                        {selectedGame === game.id ? "Currently active" : "Open this game"}
+                      </div>
                     </button>
                   ))}
                 </div>

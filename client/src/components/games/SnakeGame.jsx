@@ -29,6 +29,7 @@ export default function SnakeGame({ onExit }) {
   const [food, setFood] = useState(() => randomFood(INITIAL_SNAKE));
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
   const highScores = readStorage(STORAGE_KEYS.gameScores, { snake: 0 });
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function SnakeGame({ onExit }) {
   }, []);
 
   useEffect(() => {
-    if (gameOver) {
+    if (gameOver || !isRunning) {
       return;
     }
 
@@ -98,7 +99,7 @@ export default function SnakeGame({ onExit }) {
     }, 140);
 
     return () => clearInterval(interval);
-  }, [food, gameOver, highScores, score]);
+  }, [food, gameOver, highScores, isRunning, score]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -126,29 +127,53 @@ export default function SnakeGame({ onExit }) {
     setFood(randomFood(INITIAL_SNAKE));
     setScore(0);
     setGameOver(false);
+    setIsRunning(false);
   }
 
   return (
     <div className="rounded-[28px] p-6 md:p-7" style={{ background: colors.cardBg, color: colors.secondaryText, border: `1px solid ${colors.cardBorder}` }}>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl">Snake</h3>
-          <p className="text-sm">High score: {readStorage(STORAGE_KEYS.gameScores, { snake: 0 }).snake ?? 0}</p>
-        </div>
-        <button onClick={onExit} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
+      <div className="mb-6 flex flex-col gap-4">
+        <button onClick={onExit} className="self-end rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.breakBtn, color: colors.breakBtnText }}>
           End Break & Return to Work
         </button>
+        <div className="rounded-[24px] px-6 py-5 text-center" style={{ background: colors.cardBg, border: `2px solid ${colors.primary}` }}>
+          <h3 className="font-display text-4xl">Snake</h3>
+          <p className="mt-2 text-sm font-bold uppercase tracking-[0.16em]" style={{ color: colors.muted }}>
+            High score: {readStorage(STORAGE_KEYS.gameScores, { snake: 0 }).snake ?? 0}
+          </p>
+          <p className="mt-2 text-sm" style={{ color: colors.muted }}>
+            Glide through the grid, eat the food, and keep your streak alive.
+          </p>
+        </div>
       </div>
       <div className="flex justify-center rounded-[28px] px-4 py-6" style={{ background: colors.secondary }}>
         <canvas ref={canvasRef} width={320} height={320} className="rounded-[24px] shadow-inner" />
+      </div>
+      <div
+        className="mt-5 rounded-[24px] px-5 py-4 text-center"
+        style={{
+          background: gameOver ? colors.pillDangerBg : colors.secondary,
+          color: gameOver ? colors.pillDangerText : colors.secondaryText,
+          border: `1px solid ${gameOver ? colors.pillDangerBorder : colors.cardBorder}`
+        }}
+      >
+        <div className="text-lg font-extrabold">
+          {gameOver ? "You lose!" : isRunning ? "Stay sharp and keep climbing." : "Press start when you're ready."}
+        </div>
       </div>
       <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="font-bold">Score: {score}</p>
         {gameOver ? (
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-bold">Ready to get back to it?</span>
             <button onClick={restart} className="rounded-full px-4 py-2 text-sm font-bold" style={{ background: colors.primary, color: colors.primaryText }}>
               Play again
+            </button>
+          </div>
+        ) : !isRunning ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm" style={{ color: colors.muted }}>Use arrow keys or WASD</span>
+            <button onClick={() => setIsRunning(true)} className="rounded-full px-5 py-2 text-sm font-bold" style={{ background: colors.primary, color: colors.primaryText }}>
+              Start
             </button>
           </div>
         ) : (

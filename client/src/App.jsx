@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import Dashboard from "./components/Dashboard.jsx";
 import OnboardingFlow from "./components/OnboardingFlow.jsx";
@@ -26,7 +26,8 @@ function createSession() {
     activeTask: null,
     completedTasks: [],
     actions: 0,
-    moodScore: 3
+    moodScore: 3,
+    stressLevel: 3
   };
 }
 
@@ -51,6 +52,30 @@ function getAdaptiveBurnRate(session, baseline) {
   return Math.max(0, Math.min(1, Number(score.toFixed(2))));
 }
 
+function getRecoveredBurnRate(burnRate) {
+  return Math.max(0, Number((burnRate - 0.1).toFixed(2)));
+}
+
+function clampMoodScore(value) {
+  return Math.max(1, Math.min(5, Number(value) || 3));
+}
+
+function getBurnRateFromCheckIn(currentBurnRate, moodScore, stressLevel) {
+  const normalizedMood = clampMoodScore(moodScore);
+  const normalizedStress = clampMoodScore(stressLevel);
+  const adjustment = (normalizedStress - 3) * 0.08 + (3 - normalizedMood) * 0.05;
+  return Math.max(0, Math.min(1, Number((currentBurnRate + adjustment).toFixed(2))));
+}
+
+function readStoredExtensionCheckIn() {
+  try {
+    const rawValue = window.localStorage.getItem("wellbyExtensionCheckIn");
+    return rawValue ? JSON.parse(rawValue) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const { theme, setTheme, mode, toggleMode, colors } = useContext(ThemeContext);
   const [profile, setProfile] = useLocalStorage(STORAGE_KEYS.profile, null);
@@ -58,6 +83,10 @@ export default function App() {
   const [sessions, setSessions] = useLocalStorage(STORAGE_KEYS.sessions, []);
   const [fatigueOptIn, setFatigueOptIn] = useLocalStorage(STORAGE_KEYS.fatigueOptIn, false);
   const [breakLogs, setBreakLogs] = useLocalStorage(STORAGE_KEYS.breakLogs, []);
+  const [extensionPromptInterval, setExtensionPromptInterval] = useLocalStorage(
+    STORAGE_KEYS.extensionPromptInterval,
+    5
+  );
   const [session, setSession] = useState(createSession);
   const [apiBurnRate, setApiBurnRate] = useState(0.18);
   const [breakOpen, setBreakOpen] = useState(false);
@@ -78,31 +107,39 @@ export default function App() {
   const [flowState, setFlowState] = useState("stable");
   const [flowRatio, setFlowRatio] = useState(1);
   const [notificationState, setNotificationState] = useState(null);
+  const [burnRateRecoveryOverride, setBurnRateRecoveryOverride] = useState(null);
   const [lastApiUpdatedAt, setLastApiUpdatedAt] = useState(0);
   const apiRefreshRef = useRef(0);
   const activeToastIdRef = useRef(null);
   const escalateOnNextRef = useRef(false);
+  const lastExtensionMoodAtRef = useRef(0);
 
-  const baseline = useMemo(() => {
-    if (sessions.length < 3) {
-      return null;
-    }
-    const seed = sessions.slice(0, 3);
-    return {
-      avgTaskSeconds: average(seed.map((item) => item.avgTaskSeconds || 0)),
-      avgSessionSeconds: average(seed.map((item) => item.durationSeconds || 0))
-    };
-  }, [sessions]);
-
+  const baseline = useMemo(() => getFlowBaseline(sessions), [sessions]);
   const flowBaseline = useMemo(() => getFlowBaseline(sessions), [sessions]);
   const flowDeviation = useMemo(() => getFlowDeviation(session, flowBaseline), [session, flowBaseline]);
   const adaptiveBurnRate = useMemo(() => getAdaptiveBurnRate(session, baseline), [session, baseline]);
-  const effectiveBurnRate = Math.max(
-    apiBurnRate,
-    adaptiveBurnRate,
-    flowDeviation.penalty,
-    fatigueStatus.fatigueDetected ? 0.6 : 0
+  const calculatedBurnRate = Math.max(
+    0,
+    Math.min(
+      1,
+      Number(
+        (
+          Math.max(
+            apiBurnRate,
+            adaptiveBurnRate,
+            flowDeviation.penalty,
+            fatigueStatus.fatigueDetected ? 0.6 : 0
+          )
+        ).toFixed(2)
+      )
+    )
   );
+  const recoveryOverrideActive =
+    burnRateRecoveryOverride &&
+    Date.now() < burnRateRecoveryOverride.activeUntil;
+  const effectiveBurnRate = recoveryOverrideActive
+    ? Math.min(burnRateRecoveryOverride.value, calculatedBurnRate)
+    : calculatedBurnRate;
   const breakMinutes = useMemo(
     () => getBreakMinutes(effectiveBurnRate, fatigueStatus.fatigueDetected),
     [effectiveBurnRate, fatigueStatus.fatigueDetected]
@@ -124,6 +161,16 @@ export default function App() {
     dismissToast();
     setBanner("");
     setNotificationState(null);
+  }
+
+  function collapseMildNotification() {
+    dismissToast();
+    setNotificationState("mild-collapsed");
+  }
+
+  function reopenMildNotification() {
+    dismissToast();
+    showMildToast();
   }
 
   function triggerFullBreakMode({ noSnooze, reason }) {
@@ -160,10 +207,7 @@ export default function App() {
         flowState={flowState}
         flowRatio={flowRatio}
         snoozeCount={snoozeCount}
-        onDismiss={() => {
-          dismissToast();
-          setNotificationState(null);
-        }}
+        onDismiss={collapseMildNotification}
         onSnooze={handleSnooze}
         onTakeBreak={() => {
           dismissToast();
@@ -187,6 +231,120 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    function applyExtensionCheckIn(nextMoodScore, nextStressLevel, intent) {
+      const moodScore = clampMoodScore(nextMoodScore);
+      const stressLevel = clampMoodScore(nextStressLevel);
+      setSession((current) => ({ ...current, moodScore, stressLevel }));
+      setApiBurnRate((current) => getBurnRateFromCheckIn(current, moodScore, stressLevel));
+
+      if (intent === "break" || stressLevel >= 4) {
+        setBanner("Wellby picked up a higher stress check. A short break could help.");
+      } else if (intent === "check-in") {
+        setBanner("Wellby logged your browser check-in and updated your session.");
+      } else {
+        setBanner("Wellby logged your browser check-in.");
+      }
+    }
+
+    function applyStoredCheckInIfNeeded() {
+      const storedCheckIn = readStoredExtensionCheckIn();
+      if (!storedCheckIn) {
+        return;
+      }
+
+      const updatedAt = Number(storedCheckIn.updatedAt) || Date.now();
+      if (updatedAt <= lastExtensionMoodAtRef.current) {
+        return;
+      }
+
+      lastExtensionMoodAtRef.current = updatedAt;
+      applyExtensionCheckIn(storedCheckIn.moodScore, storedCheckIn.stressLevel, storedCheckIn.intent);
+    }
+
+    function handleExtensionMessage(event) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      if (event.data?.source !== "wellby-extension" || event.data?.type !== "MOOD_SYNC") {
+        return;
+      }
+
+      const updatedAt = Number(event.data.updatedAt) || Date.now();
+      if (updatedAt <= lastExtensionMoodAtRef.current) {
+        return;
+      }
+
+      lastExtensionMoodAtRef.current = updatedAt;
+      applyExtensionCheckIn(event.data.moodScore, event.data.stressLevel, event.data.intent);
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const extensionMoodScore = params.get("extensionMoodScore");
+    const extensionStressLevel = params.get("extensionStressLevel");
+    const extensionIntent = params.get("extensionIntent");
+    const extensionMoodUpdatedAt = Number(params.get("extensionMoodUpdatedAt")) || Date.now();
+
+    if (extensionMoodScore !== null || extensionStressLevel !== null) {
+      lastExtensionMoodAtRef.current = extensionMoodUpdatedAt;
+      applyExtensionCheckIn(
+        extensionMoodScore ?? session.moodScore,
+        extensionStressLevel ?? session.stressLevel,
+        extensionIntent
+      );
+      params.delete("extensionMoodScore");
+      params.delete("extensionStressLevel");
+      params.delete("extensionIntent");
+      params.delete("extensionMoodUpdatedAt");
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", nextUrl);
+    }
+
+    window.addEventListener("message", handleExtensionMessage);
+    window.addEventListener("focus", applyStoredCheckInIfNeeded);
+    document.addEventListener("visibilitychange", applyStoredCheckInIfNeeded);
+    applyStoredCheckInIfNeeded();
+
+    return () => {
+      window.removeEventListener("message", handleExtensionMessage);
+      window.removeEventListener("focus", applyStoredCheckInIfNeeded);
+      document.removeEventListener("visibilitychange", applyStoredCheckInIfNeeded);
+    };
+  }, []);
+
+  useEffect(() => {
+    window.postMessage(
+      {
+        source: "wellby-app",
+        type: "SETTINGS_SYNC",
+        extensionPromptInterval,
+        theme,
+        mode
+      },
+      window.location.origin
+    );
+  }, [extensionPromptInterval, theme, mode]);
+
+  useEffect(() => {
+    const syncedTask = session.activeTask?.name ?? session.taskInput ?? "";
+    const activeTasks = session.activeTask?.name ? [session.activeTask.name] : [];
+
+    window.localStorage.setItem("wellbyCurrentTask", syncedTask);
+    window.localStorage.setItem("wellbyActiveTasks", JSON.stringify(activeTasks));
+
+    window.postMessage(
+      {
+        source: "wellby-app",
+        type: "TASK_SYNC",
+        currentTask: syncedTask,
+        activeTasks
+      },
+      window.location.origin
+    );
+  }, [session.activeTask, session.taskInput]);
+
+  useEffect(() => {
     if (!profile) {
       return;
     }
@@ -200,7 +358,8 @@ export default function App() {
           10,
           Math.max(
             0,
-            (6 - session.moodScore) * 1.4 +
+            (6 - session.moodScore) * 1.1 +
+              (session.stressLevel - 1) * 1.2 +
               Math.min(4, session.elapsedSeconds / 3600) +
               Math.max(0, (averageTaskSeconds - (baseline?.avgTaskSeconds || averageTaskSeconds)) / 600)
           )
@@ -232,6 +391,9 @@ export default function App() {
         }
         const adjusted = Math.max(0, Number((Number(data.burn_rate ?? 0) - breakCredit).toFixed(2)));
         setApiBurnRate(adjusted);
+        if (!recoveryOverrideActive) {
+          setBurnRateRecoveryOverride(null);
+        }
         if (breakCredit > 0) {
           setBreakCredit(0);
         }
@@ -262,6 +424,7 @@ export default function App() {
     session.completedTasks,
     session.actions,
     session.moodScore,
+    session.stressLevel,
     baseline,
     breakCredit,
     session.startedAt,
@@ -321,6 +484,10 @@ export default function App() {
       return;
     }
 
+    if (notificationState === "mild-collapsed") {
+      return;
+    }
+
     if (notificationState !== "mild") {
       showMildToast();
     }
@@ -335,26 +502,21 @@ export default function App() {
   ]);
 
   function completeCurrentSession() {
-    const taskDurations = session.completedTasks.map((task) => task.durationSeconds);
-    const summary = {
-      id: session.startedAt,
-      durationSeconds: session.elapsedSeconds,
-      avgTaskSeconds: taskDurations.length ? average(taskDurations) : session.elapsedSeconds || 0,
-      completedTasks: session.completedTasks.length,
-      breakTakenAt: new Date().toISOString()
-    };
-
-    setSessions((current) => [...current, summary]);
+    const recoveredBurnRate = getRecoveredBurnRate(effectiveBurnRate);
+    const breakTimestamp = new Date().toISOString();
     setBreakLogs((current) => [
       ...current,
-      { timestamp: summary.breakTakenAt, durationMinutes: breakMinutes }
+      { timestamp: breakTimestamp, durationMinutes: breakMinutes }
     ]);
+    setBurnRateRecoveryOverride({
+      value: recoveredBurnRate,
+      activeUntil: Date.now() + 45000
+    });
     setBreakCredit(0.1);
-    setApiBurnRate((current) => Math.max(0, Number((current - 0.1).toFixed(2))));
+    setApiBurnRate(recoveredBurnRate);
     setSnoozeCount(0);
     escalateOnNextRef.current = false;
     clearAllNotifications();
-    setSession(createSession());
   }
 
   function handleTaskStart() {
@@ -380,24 +542,40 @@ export default function App() {
         return current;
       }
 
-      return {
-        ...current,
-        actions: current.actions + 1,
-        activeTask: null,
-        completedTasks: [
-          ...current.completedTasks,
-          {
-            ...current.activeTask,
-            completedAt: Date.now(),
-            durationSeconds: Math.max(30, Math.floor((Date.now() - current.activeTask.startedAt) / 1000))
-          }
-        ]
+      const completedTask = {
+        ...current.activeTask,
+        completedAt: Date.now(),
+        durationSeconds: Math.max(30, Math.floor((Date.now() - current.activeTask.startedAt) / 1000))
       };
+      const completedTasks = [...current.completedTasks, completedTask];
+      const taskDurations = completedTasks.map((task) => task.durationSeconds);
+      const summary = {
+        id: current.startedAt,
+        durationSeconds: current.elapsedSeconds,
+        avgTaskSeconds: taskDurations.length ? average(taskDurations) : current.elapsedSeconds || 0,
+        completedTasks: completedTasks.length,
+        completedAt: new Date().toISOString()
+      };
+
+      setSessions((existing) => [...existing, summary]);
+      clearAllNotifications();
+      setBreakOpen(false);
+      setSnoozeCount(0);
+      escalateOnNextRef.current = false;
+
+      return createSession();
     });
   }
 
   if (!profile) {
-    return <OnboardingFlow onComplete={setProfile} />;
+    return (
+      <OnboardingFlow
+        onComplete={(nextProfile) => {
+          setProfile(nextProfile);
+          setCurrentPage("dashboard");
+        }}
+      />
+    );
   }
 
   if (currentPage === "burnout-info") {
@@ -409,6 +587,8 @@ export default function App() {
       <SettingsPage
         fatigueOptIn={fatigueOptIn}
         onToggleFatigue={() => setFatigueOptIn((current) => !current)}
+        extensionPromptInterval={extensionPromptInterval}
+        onSetExtensionPromptInterval={setExtensionPromptInterval}
         mode={mode}
         onToggleMode={toggleMode}
         activeTheme={theme}
@@ -438,12 +618,22 @@ export default function App() {
         onTaskInputChange={(value) => setSession((current) => ({ ...current, taskInput: value }))}
         onTaskStart={handleTaskStart}
         onTaskComplete={handleTaskComplete}
-        onMoodSelect={(score) => setSession((current) => ({ ...current, moodScore: score }))}
+        onMoodSelect={(score) => {
+          const moodScore = clampMoodScore(score);
+          setSession((current) => ({ ...current, moodScore }));
+          setApiBurnRate((current) => getBurnRateFromCheckIn(current, moodScore, session.stressLevel));
+        }}
+        onStressSelect={(score) => {
+          const stressLevel = clampMoodScore(score);
+          setSession((current) => ({ ...current, stressLevel }));
+          setApiBurnRate((current) => getBurnRateFromCheckIn(current, session.moodScore, stressLevel));
+        }}
         onStartBreak={() => triggerFullBreakMode({ noSnooze: false, reason: "manual" })}
         onOpenBurnoutInfo={() => setCurrentPage("burnout-info")}
         onOpenSettings={() => setCurrentPage("settings")}
         banner={banner}
         notificationState={notificationState}
+        onExpandNotification={reopenMildNotification}
       />
       {breakOpen ? (
         <BreakMode
@@ -451,7 +641,7 @@ export default function App() {
           noSnooze={breakContext.noSnooze}
           reason={breakContext.reason}
           beforeBurnRate={breakContext.beforeBurnRate}
-          afterBurnRate={Math.max(0, Number((effectiveBurnRate - 0.1).toFixed(2)))}
+          afterBurnRate={getRecoveredBurnRate(effectiveBurnRate)}
           onClose={() => {
             setBreakOpen(false);
             completeCurrentSession();
