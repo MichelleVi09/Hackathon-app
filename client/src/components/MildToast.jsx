@@ -6,19 +6,17 @@ export default function MildToast({
   burnRate,
   flowState,
   flowRatio,
-  onDismiss,
-  onSnooze,
-  onTakeBreak,
-  snoozeCount
+  onDismissForNow,
+  onTakeBreak
 }) {
   const { colors } = useContext(ThemeContext);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSnooze();
+      onDismissForNow();
     }, 60000);
     return () => clearTimeout(timer);
-  }, [onSnooze]);
+  }, [onDismissForNow]);
 
   return (
     <div
@@ -63,19 +61,10 @@ export default function MildToast({
             >
               Take a break
             </button>
-            {snoozeCount < 2 ? (
-              <button
-                onClick={onSnooze}
-                className="rounded-full border px-4 py-2 text-sm font-bold"
-                style={{ borderColor: colors.muted, color: colors.muted }}
-              >
-                5 more minutes
-              </button>
-            ) : null}
             <button
-              onClick={onDismiss}
+              onClick={onDismissForNow}
               className="rounded-full border px-4 py-2 text-sm font-bold"
-              style={{ borderColor: colors.cardBorder, color: colors.secondaryText }}
+              style={{ borderColor: colors.muted, color: colors.muted }}
             >
               Dismiss
             </button>

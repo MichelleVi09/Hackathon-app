@@ -6,12 +6,22 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   font-family: "Mulish", ui-sans-serif, system-ui, sans-serif;
-  background: var(--wellby-dashBg, #faf7f2);
+  background:
+    radial-gradient(circle at 12% 18%, rgb(var(--wellby-primary-rgb, 122 101 85) / 0.16), transparent 28%),
+    radial-gradient(circle at 88% 12%, rgb(var(--wellby-muted-rgb, 181 150 126) / 0.16), transparent 26%),
+    linear-gradient(180deg, rgb(var(--wellby-dashBg-rgb, 250 247 242) / 0.94), rgb(var(--wellby-dashBg-rgb, 250 247 242) / 1));
   color: var(--wellby-secondaryText, #3d2b1f);
+  overflow-x: hidden;
 }
 
 * {
@@ -22,4 +32,164 @@ button,
 input,
 select {
   font: inherit;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(24px);
+  opacity: 0.9;
+}
+
+body::before {
+  top: -8rem;
+  left: -6rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(var(--wellby-primary-rgb, 122 101 85) / 0.18) 0%, transparent 68%);
+  animation: wellby-float-a 18s ease-in-out infinite;
+}
+
+body::after {
+  right: -7rem;
+  bottom: -10rem;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(var(--wellby-muted-rgb, 181 150 126) / 0.2) 0%, transparent 70%);
+  animation: wellby-float-b 22s ease-in-out infinite;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+.wellby-page-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.wellby-glass {
+  background:
+    linear-gradient(
+      160deg,
+      rgb(var(--wellby-cardBg-rgb, 255 255 255) / 0.82),
+      rgb(var(--wellby-secondary-rgb, 237 228 214) / 0.56)
+    );
+  border: 1px solid rgb(var(--wellby-cardBorder-rgb, 232 221 208) / 0.42);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 18px 50px rgb(var(--wellby-sidebarBg-rgb, 61 43 31) / 0.08),
+    inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+
+.wellby-glass-dark {
+  background:
+    linear-gradient(
+      145deg,
+      rgb(var(--wellby-sidebarBg-rgb, 61 43 31) / 0.88),
+      rgb(var(--wellby-navActiveBg-rgb, 90 61 43) / 0.72)
+    );
+  border: 1px solid rgb(var(--wellby-sidebarBorder-rgb, 90 61 43) / 0.5);
+  backdrop-filter: blur(22px);
+  box-shadow:
+    0 22px 60px rgb(var(--wellby-sidebarBg-rgb, 61 43 31) / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+
+.wellby-glass-soft {
+  background:
+    linear-gradient(
+      160deg,
+      rgb(var(--wellby-secondary-rgb, 237 228 214) / 0.72),
+      rgb(var(--wellby-cardBg-rgb, 255 255 255) / 0.46)
+    );
+  border: 1px solid rgb(var(--wellby-cardBorder-rgb, 232 221 208) / 0.28);
+  backdrop-filter: blur(16px);
+}
+
+.wellby-hover-lift {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.wellby-hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 24px 55px rgb(var(--wellby-sidebarBg-rgb, 61 43 31) / 0.12),
+    inset 0 1px 0 rgb(255 255 255 / 0.38);
+}
+
+.wellby-accent-ring {
+  position: relative;
+  overflow: hidden;
+}
+
+.wellby-accent-ring::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  border: 1px solid rgb(var(--wellby-primary-rgb, 122 101 85) / 0.12);
+  pointer-events: none;
+}
+
+.wellby-button {
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.wellby-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgb(var(--wellby-primary-rgb, 122 101 85) / 0.18);
+}
+
+.wellby-button:active {
+  transform: translateY(0);
+}
+
+.wellby-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.wellby-sheen::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto auto -20%;
+  width: 50%;
+  height: 180%;
+  background: linear-gradient(115deg, transparent 0%, rgb(255 255 255 / 0.2) 48%, transparent 100%);
+  transform: rotate(18deg);
+  pointer-events: none;
+}
+
+@keyframes wellby-float-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(2rem, 1.2rem, 0) scale(1.05);
+  }
+}
+
+@keyframes wellby-float-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2.5rem, -1.5rem, 0) scale(1.08);
+  }
 }

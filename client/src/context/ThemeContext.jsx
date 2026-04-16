@@ -6,6 +6,24 @@ import {
   useState
 } from "react";
 
+function hexToRgbChannels(hex) {
+  const sanitized = hex.replace("#", "");
+  const normalized =
+    sanitized.length === 3
+      ? sanitized
+          .split("")
+          .map((value) => value + value)
+          .join("")
+      : sanitized;
+
+  const bigint = Number.parseInt(normalized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+
+  return `${r} ${g} ${b}`;
+}
+
 export const themes = {
   warm: {
     light: {
@@ -336,6 +354,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     Object.entries(colors).forEach(([key, value]) => {
       document.documentElement.style.setProperty(`--wellby-${key}`, value);
+      document.documentElement.style.setProperty(`--wellby-${key}-rgb`, hexToRgbChannels(value));
     });
     document.documentElement.dataset.theme = theme;
     document.documentElement.dataset.mode = mode;

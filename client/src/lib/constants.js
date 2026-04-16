@@ -4,7 +4,19 @@ export const STORAGE_KEYS = {
   sessions: "wellby.sessions",
   fatigueOptIn: "wellby.fatigueOptIn",
   breakLogs: "wellby.breakLogs",
-  gameScores: "wellby.gameScores"
+  gameScores: "wellby.gameScores",
+  lastLoginName: "wellby.lastLoginName",
+  plannerTasks: "wellby.plannerTasks",
+  dashboardSections: "wellby.dashboardSections"
+};
+
+export const DEFAULT_DASHBOARD_SECTIONS = {
+  planner: true,
+  sessionStats: true,
+  moodCheckIn: true,
+  burnoutMeter: true,
+  breakRecommendation: true,
+  weeklyPlanner: true
 };
 
 export const GAME_OPTIONS = [

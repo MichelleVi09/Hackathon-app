@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { motion } from "framer-motion";
 import { ThemeContext } from "../context/ThemeContext.jsx";
+import { hexToRgba } from "../lib/color.js";
 
 function getTier(burnRate) {
   if (burnRate < 0.3) return "good";
@@ -8,14 +9,21 @@ function getTier(burnRate) {
   return "high";
 }
 
-export default function BurnoutMeter({ burnRate, onOpenDetails }) {
+export default function BurnoutMeter({ burnRate, meterReady, plannerInsights, onOpenDetails }) {
   const { colors } = useContext(ThemeContext);
   const percent = Math.round(burnRate * 100);
   const tier = getTier(burnRate);
   const fillColor =
     tier === "good" ? colors.burnGood : tier === "warn" ? colors.burnWarn : colors.burnHigh;
   const pillConfig =
-    tier === "good"
+    !meterReady
+      ? {
+          background: hexToRgba(colors.secondary, 0.72),
+          color: colors.secondaryText,
+          borderColor: colors.cardBorder,
+          label: "Standby"
+        }
+      : tier === "good"
       ? {
           background: colors.pillGoodBg,
           color: colors.pillGoodText,
@@ -36,13 +44,21 @@ export default function BurnoutMeter({ burnRate, onOpenDetails }) {
             label: "Time for a break"
           };
   const { label, ...pillStyles } = pillConfig;
+  const standbyTitle = !plannerInsights.totalCount
+    ? "Planner not armed yet"
+    : "Watching due times";
+  const standbyCopy = !plannerInsights.totalCount
+    ? "Add a planner task with a due date and time to start burnout tracking."
+    : "The meter will start once the first declared deadline passes.";
 
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onOpenDetails}
-      className="w-full rounded-[28px] p-5 text-left shadow-lg transition hover:translate-y-[-2px]"
-      style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.995 }}
+      className="wellby-glass wellby-accent-ring wellby-sheen w-full rounded-[28px] p-5 text-left"
+      style={{ boxShadow: `0 22px 50px ${hexToRgba(colors.sidebarBg, 0.1)}` }}
     >
       <div className="mb-4 flex items-center justify-between">
         <div>
@@ -50,24 +66,38 @@ export default function BurnoutMeter({ burnRate, onOpenDetails }) {
             Burnout Meter
           </p>
           <h3 className="font-display text-2xl" style={{ color: colors.secondaryText }}>
-            {label}
+            {meterReady ? label : standbyTitle}
           </h3>
           <p className="mt-1 text-sm" style={{ color: colors.muted }}>
-            Click to learn what this score means
+            {meterReady ? "Click to learn what this score means" : standbyCopy}
           </p>
         </div>
         <div className="rounded-full border px-4 py-2 text-sm font-bold" style={pillStyles}>
-          {percent}%
+          {meterReady ? `${percent}%` : "--"}
         </div>
       </div>
-      <div className="relative h-5 overflow-hidden rounded-full" style={{ background: colors.secondary }}>
+      <div
+        className="relative h-5 overflow-hidden rounded-full"
+        style={{ background: hexToRgba(colors.secondary, 0.78), boxShadow: `inset 0 1px 2px ${hexToRgba(colors.sidebarBg, 0.08)}` }}
+      >
         <motion.div
-          animate={{ width: `${percent}%` }}
+          animate={{ width: `${meterReady ? percent : 8}%` }}
           transition={{ type: "spring", stiffness: 90, damping: 18 }}
           className="absolute inset-y-0 left-0 rounded-full"
-          style={{ background: fillColor }}
+          style={{
+            background: meterReady
+              ? `linear-gradient(90deg, ${fillColor}, ${hexToRgba(fillColor, 0.85)})`
+              : `linear-gradient(90deg, ${hexToRgba(colors.muted, 0.75)}, ${hexToRgba(colors.secondaryText, 0.55)})`,
+            boxShadow: meterReady ? `0 0 24px ${hexToRgba(fillColor, 0.35)}` : "none"
+          }}
+        />
+        <motion.div
+          animate={{ x: ["-15%", "105%"] }}
+          transition={{ repeat: Infinity, duration: 2.6, ease: "linear" }}
+          className="absolute inset-y-0 left-0 w-16 rounded-full"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent)" }}
         />
       </div>
-    </button>
+    </motion.button>
   );
 }

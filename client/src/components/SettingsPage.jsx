@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext.jsx";
 import LeafIcon from "./LeafIcon.jsx";
+import { hexToRgba } from "../lib/color.js";
 
 const THEME_OPTIONS = [
   { id: "warm", label: "Warm", description: "Soft browns and caramels - cozy and grounding", color: "#B5967E" },
@@ -12,6 +13,7 @@ const THEME_OPTIONS = [
 export default function SettingsPage({
   fatigueOptIn,
   onToggleFatigue,
+  fatigueStatus,
   mode,
   onToggleMode,
   activeTheme,
@@ -19,13 +21,20 @@ export default function SettingsPage({
   onBack
 }) {
   const { colors } = useContext(ThemeContext);
+  const fatigueLabel = !fatigueOptIn
+    ? "Disabled"
+    : fatigueStatus.running && fatigueStatus.cameraAvailable
+      ? "Running in background"
+      : fatigueStatus.warning
+        ? "Needs attention"
+        : "Starting up";
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style={{ background: colors.dashBg, color: colors.secondaryText }}>
+    <div className="wellby-page-shell min-h-screen px-4 py-6 sm:px-6 lg:px-8" style={{ background: colors.dashBg, color: colors.secondaryText }}>
       <div className="mx-auto max-w-5xl pb-20">
         <header
-          className="mb-6 flex flex-col gap-4 rounded-[32px] p-6 shadow-glow lg:flex-row lg:items-center lg:justify-between"
-          style={{ background: colors.sidebarBg, color: colors.wordmark, border: `1px solid ${colors.sidebarBorder}` }}
+          className="wellby-glass-dark wellby-accent-ring mb-6 flex flex-col gap-4 rounded-[32px] p-6 lg:flex-row lg:items-center lg:justify-between"
+          style={{ color: colors.wordmark }}
         >
           <div className="flex items-center gap-4">
             <LeafIcon className="h-12 w-12" primary={colors.primary} secondary={colors.secondary} />
@@ -36,25 +45,29 @@ export default function SettingsPage({
           </div>
           <button
             onClick={onBack}
-            className="rounded-full px-5 py-3 text-sm font-bold"
-            style={{ background: colors.primary, color: colors.primaryText }}
+            className="wellby-button rounded-full px-5 py-3 text-sm font-bold"
+            style={{
+              background: colors.primary,
+              color: colors.primaryText,
+              boxShadow: `0 16px 34px ${hexToRgba(colors.primary, 0.22)}`
+            }}
           >
             Back to dashboard
           </button>
         </header>
 
         <div className="grid gap-6">
-          <section className="rounded-[32px] p-6 shadow-lg" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
+          <section className="wellby-glass wellby-accent-ring rounded-[32px] p-6">
             <p className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Appearance</p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {THEME_OPTIONS.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => onSetTheme(item.id)}
-                  className="rounded-[22px] border p-4 text-left"
+                  className="wellby-hover-lift rounded-[22px] border p-4 text-left"
                   style={{
-                    background: activeTheme === item.id ? colors.navActiveBg : colors.cardBg,
-                    borderColor: activeTheme === item.id ? colors.navActiveBorder : colors.cardBorder,
+                    background: activeTheme === item.id ? hexToRgba(colors.navActiveBg, 0.8) : hexToRgba(colors.cardBg, 0.6),
+                    borderColor: activeTheme === item.id ? colors.navActiveBorder : hexToRgba(colors.cardBorder, 0.42),
                     color: activeTheme === item.id ? colors.navActive : colors.secondaryText
                   }}
                 >
@@ -74,26 +87,45 @@ export default function SettingsPage({
 
             <button
               onClick={onToggleMode}
-              className="mt-5 rounded-full px-4 py-2 text-sm font-bold"
-              style={{ background: colors.breakBtn, color: colors.breakBtnText }}
+              className="wellby-button mt-5 rounded-full px-4 py-2 text-sm font-bold"
+              style={{
+                background: colors.breakBtn,
+                color: colors.breakBtnText,
+                boxShadow: `0 14px 30px ${hexToRgba(colors.breakBtn, 0.16)}`
+              }}
             >
               Switch to {mode === "light" ? "dark" : "light"} mode
             </button>
           </section>
 
-          <section className="rounded-[32px] p-6 shadow-lg" style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}>
+          <section className="wellby-glass wellby-accent-ring rounded-[32px] p-6">
             <p className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>Wellbeing Sensors</p>
-            <div className="mt-4 flex items-start justify-between gap-4 rounded-[24px] p-4" style={{ background: colors.secondary }}>
+            <div className="wellby-glass-soft mt-4 flex items-start justify-between gap-4 rounded-[24px] p-4">
               <div>
                 <h2 className="font-bold">Let Wellby watch for fatigue via webcam</h2>
                 <p className="mt-2 text-sm leading-7" style={{ color: colors.muted }}>
                   Your camera never leaves your device. Wellby sees nothing - your computer does all the work locally.
                 </p>
+                <p className="mt-2 text-sm font-semibold" style={{ color: colors.secondaryText }}>
+                  Status: {fatigueLabel}
+                </p>
+                {fatigueOptIn ? (
+                  <p className="mt-1 text-xs leading-6" style={{ color: colors.muted }}>
+                    {fatigueStatus.warning
+                      ? fatigueStatus.warning
+                      : fatigueStatus.running
+                        ? "The EAR detector keeps monitoring locally while you keep working in the app."
+                        : "Waiting for the local detector to come online."}
+                  </p>
+                ) : null}
               </div>
               <button
                 onClick={onToggleFatigue}
-                className="rounded-full px-4 py-2 text-sm font-bold"
-                style={{ background: fatigueOptIn ? colors.primary : colors.sidebarBg, color: fatigueOptIn ? colors.primaryText : colors.wordmark }}
+                className="wellby-button rounded-full px-4 py-2 text-sm font-bold"
+                style={{
+                  background: fatigueOptIn ? colors.primary : hexToRgba(colors.sidebarBg, 0.86),
+                  color: fatigueOptIn ? colors.primaryText : colors.wordmark
+                }}
               >
                 {fatigueOptIn ? "Enabled" : "Disabled"}
               </button>
@@ -102,7 +134,7 @@ export default function SettingsPage({
         </div>
       </div>
       <footer
-        className="fixed bottom-0 left-0 right-0 px-4 py-3 text-center text-xs font-semibold"
+        className="fixed inset-x-0 bottom-0 top-auto z-[70] px-4 py-3 text-center text-xs font-semibold"
         style={{ background: colors.sidebarBg, color: colors.wordmark }}
       >
         Wellby is a wellness companion, not a substitute for professional mental health care.

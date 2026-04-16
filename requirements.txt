@@ -1,1 +1,4 @@
 flask
+mediapipe
+numpy
+opencv-python

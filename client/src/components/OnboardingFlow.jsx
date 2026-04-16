@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ThemeContext } from "../context/ThemeContext.jsx";
 import LeafIcon from "./LeafIcon.jsx";
 import { GAME_OPTIONS, SENIORITY_OPTIONS } from "../lib/constants.js";
+import { hexToRgba } from "../lib/color.js";
 
 export default function OnboardingFlow({ onComplete }) {
   const { colors } = useContext(ThemeContext);
@@ -45,15 +46,15 @@ export default function OnboardingFlow({ onComplete }) {
 
   return (
     <div
-      className="min-h-screen px-6 py-10 font-body"
+      className="wellby-page-shell min-h-screen px-6 py-10 font-body"
       style={{ background: colors.dashBg, color: colors.secondaryText }}
     >
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <motion.section
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-[36px] p-8 shadow-glow backdrop-blur"
-          style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}
+          className="wellby-glass wellby-accent-ring rounded-[36px] p-8 backdrop-blur"
+          style={{ boxShadow: `0 24px 60px ${hexToRgba(colors.sidebarBg, 0.1)}` }}
         >
           <div className="mb-8 flex items-center gap-4">
             <LeafIcon className="h-14 w-14" primary={colors.primary} secondary={colors.secondary} />
@@ -74,7 +75,7 @@ export default function OnboardingFlow({ onComplete }) {
                 key={button.label}
                 type="button"
                 onClick={() => redirectTo(button.target)}
-                className="rounded-full px-5 py-3 text-sm font-bold transition"
+                className="wellby-button rounded-full px-5 py-3 text-sm font-bold"
                 style={{
                   background:
                     button.target === "wellby-onboarding-form" ? colors.primary : colors.secondary,
@@ -84,7 +85,11 @@ export default function OnboardingFlow({ onComplete }) {
                       : colors.secondaryText,
                   border: `1px solid ${
                     button.target === "wellby-onboarding-form" ? colors.primary : colors.cardBorder
-                  }`
+                  }`,
+                  boxShadow:
+                    button.target === "wellby-onboarding-form"
+                      ? `0 16px 36px ${hexToRgba(colors.primary, 0.2)}`
+                      : "none"
                 }}
               >
                 {button.label}
@@ -93,19 +98,19 @@ export default function OnboardingFlow({ onComplete }) {
           </div>
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             {featureLinks.map((item) => (
-              <button
+              <motion.button
                 key={item.text}
                 type="button"
                 onClick={() => redirectTo(item.target)}
-                className="rounded-[24px] p-4 text-left text-sm font-semibold transition hover:translate-y-[-2px]"
+                whileHover={{ y: -4 }}
+                className="wellby-glass-soft rounded-[24px] p-4 text-left text-sm font-semibold"
                 style={{
-                  background: colors.secondary,
                   color: colors.secondaryText,
-                  border: `1px solid ${colors.cardBorder}`
+                  boxShadow: `0 14px 32px ${hexToRgba(colors.sidebarBg, 0.06)}`
                 }}
               >
                 {item.text}
-              </button>
+              </motion.button>
             ))}
           </div>
         </motion.section>
@@ -116,8 +121,8 @@ export default function OnboardingFlow({ onComplete }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12 }}
           onSubmit={submit}
-          className="rounded-[36px] p-8 shadow-2xl"
-          style={{ background: colors.cardBg, border: `1px solid ${colors.cardBorder}` }}
+          className="wellby-glass wellby-accent-ring rounded-[36px] p-8"
+          style={{ boxShadow: `0 24px 60px ${hexToRgba(colors.sidebarBg, 0.1)}` }}
         >
           <h2 className="font-display text-3xl">Let's make Wellby yours</h2>
           <div className="mt-6 space-y-5">
@@ -130,7 +135,11 @@ export default function OnboardingFlow({ onComplete }) {
                 onChange={(event) => updateField("name", event.target.value)}
                 placeholder="Alex"
                 className="w-full rounded-2xl border-0 px-4 py-3 text-lg outline-none"
-                style={{ background: colors.secondary, color: colors.secondaryText }}
+                style={{
+                  background: hexToRgba(colors.secondary, 0.72),
+                  color: colors.secondaryText,
+                  boxShadow: `inset 0 1px 0 ${hexToRgba(colors.cardBg, 0.4)}`
+                }}
               />
             </label>
 
@@ -160,7 +169,10 @@ export default function OnboardingFlow({ onComplete }) {
                 value={form.setup}
                 onChange={(event) => updateField("setup", event.target.value)}
                 className="w-full rounded-2xl border-0 px-4 py-3 outline-none"
-                style={{ background: colors.secondary, color: colors.secondaryText }}
+                style={{
+                  background: hexToRgba(colors.secondary, 0.72),
+                  color: colors.secondaryText
+                }}
               >
                 <option value="wfh">WFH</option>
                 <option value="office">Office</option>
@@ -176,7 +188,10 @@ export default function OnboardingFlow({ onComplete }) {
                 value={form.seniority}
                 onChange={(event) => updateField("seniority", Number(event.target.value))}
                 className="w-full rounded-2xl border-0 px-4 py-3 outline-none"
-                style={{ background: colors.secondary, color: colors.secondaryText }}
+                style={{
+                  background: hexToRgba(colors.secondary, 0.72),
+                  color: colors.secondaryText
+                }}
               >
                 {SENIORITY_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -196,14 +211,18 @@ export default function OnboardingFlow({ onComplete }) {
                     key={game.id}
                     type="button"
                     onClick={() => updateField("favoriteGame", game.id)}
-                    className="rounded-2xl px-4 py-4 text-left transition"
+                    className="wellby-button rounded-2xl px-4 py-4 text-left"
                     style={{
                       background: form.favoriteGame === game.id ? colors.primary : colors.secondary,
                       color:
                         form.favoriteGame === game.id ? colors.primaryText : colors.secondaryText,
                       border: `1px solid ${
                         form.favoriteGame === game.id ? colors.primary : colors.cardBorder
-                      }`
+                      }`,
+                      boxShadow:
+                        form.favoriteGame === game.id
+                          ? `0 16px 34px ${hexToRgba(colors.primary, 0.18)}`
+                          : "none"
                     }}
                   >
                     <div className="text-2xl">{game.emoji}</div>
@@ -215,11 +234,9 @@ export default function OnboardingFlow({ onComplete }) {
 
             <div
               id="privacy-note"
-              className="rounded-[24px] p-4 text-sm leading-6"
+              className="wellby-glass-soft rounded-[24px] p-4 text-sm leading-6"
               style={{
-                background: colors.secondary,
-                color: colors.secondaryText,
-                border: `1px solid ${colors.cardBorder}`
+                color: colors.secondaryText
               }}
             >
               If you enable webcam fatigue detection later, processing stays on your device. Nothing
@@ -229,8 +246,12 @@ export default function OnboardingFlow({ onComplete }) {
 
           <button
             type="submit"
-            className="mt-8 w-full rounded-full px-6 py-4 font-bold transition"
-            style={{ background: colors.primary, color: colors.primaryText }}
+            className="wellby-button mt-8 w-full rounded-full px-6 py-4 font-bold"
+            style={{
+              background: colors.primary,
+              color: colors.primaryText,
+              boxShadow: `0 18px 38px ${hexToRgba(colors.primary, 0.22)}`
+            }}
           >
             Start my first Wellby session
           </button>
