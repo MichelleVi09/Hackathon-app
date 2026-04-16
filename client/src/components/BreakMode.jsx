@@ -71,7 +71,12 @@ function AmbientParticles({ mode, colors }) {
         key={`leaf-${particle.id}`}
         className="absolute block"
         initial={{ y: "-12vh", opacity: 0, rotate: -12, x: 0 }}
-        animate={{ y: "108vh", opacity: [0, 0.9, 0.82, 0], rotate: [-12, 14, -18, 10], x: [0, 18, -22, 14, 0] }}
+        animate={{
+          y: "108vh",
+          opacity: [0, 0.9, 0.82, 0],
+          rotate: [-12, 14, -18, 10],
+          x: [0, 18, -22, 14, 0]
+        }}
         transition={{
           duration: particle.duration,
           repeat: Infinity,
@@ -446,7 +451,10 @@ export default function BreakMode({ initialGame, onClose, noSnooze, reason, befo
                       </span>
                     </div>
                     <div className="mt-4 font-display text-2xl">{game.label}</div>
-                    <p className="mt-2 text-sm leading-6" style={{ color: selectedGame === game.id ? hexToRgba(colors.primaryText, 0.82) : colors.muted }}>
+                    <p
+                      className="mt-2 text-sm leading-6"
+                      style={{ color: selectedGame === game.id ? hexToRgba(colors.primaryText, 0.82) : colors.muted }}
+                    >
                       {game.id === "snake"
                         ? "A quick arcade loop for loosening your focus."
                         : game.id === "tictactoe"
@@ -473,7 +481,9 @@ export default function BreakMode({ initialGame, onClose, noSnooze, reason, befo
                   <p className="text-sm font-bold uppercase tracking-[0.18em]" style={{ color: colors.muted }}>
                     Active game
                   </p>
-                  <h3 className="font-display text-2xl">{GAME_OPTIONS.find((game) => game.id === selectedGame)?.label}</h3>
+                  <h3 className="font-display text-2xl">
+                    {GAME_OPTIONS.find((game) => game.id === selectedGame)?.label}
+                  </h3>
                 </div>
                 <div
                   className="rounded-full px-4 py-2 text-sm font-bold"
